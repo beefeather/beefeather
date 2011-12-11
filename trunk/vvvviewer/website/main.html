@@ -3,6 +3,8 @@
 		VVVViewer
 	</title>
 	<script src="main.js"></script>
+	<script src="viewer.js"></script>
+	<script src="proxy.js"></script>
 	<body>
 		<div style="background-color: yellow; position: fixed; width: auto; height: auto; top: 0%; right: 0; bottom: 0px; left: 0em;">
 			<h1>VVVViewer</h1>
@@ -36,4 +38,15 @@
 	<script>
 		PageHandler = CreateHandler(document);
 	</script>
+    <script>
+    	var test_img = new Image();
+		test_img.onload = function() {
+			return 2;
+		};
+		test_img.onerror = function() {
+			return 2;
+		};
+		test_img.src = "http://www.google.com/images/logos/google_logo.gif";
+		return test_img; 
+    </script>
 </html>
