@@ -6706,4 +6706,9 @@ def warn_not_a_doxygen_trailing_member_comment : Warning<
   "not a Doxygen trailing comment">, InGroup<Documentation>, DefaultIgnore;
 } // end of documentation issue category
 
+// Roger.
+def err_namespace_redefinition_roger : Error<
+  "namespace secondary definition is not allowed in roger mode">;
+
+
 } // end of sema component.

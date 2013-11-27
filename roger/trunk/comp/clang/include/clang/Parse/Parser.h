@@ -47,6 +47,15 @@ namespace clang {
   class VersionTuple;
   class OMPClause;
 
+  struct RogerNonType;
+  struct RogerClassDecl;
+  struct RogerDeclList;
+  struct RogerNamespaceDeclList;
+  struct RogerDeclaration;
+
+  class RogerParseScope;
+  class RogerNestedTokensState;
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -265,6 +274,8 @@ public:
   /// ParseTopLevelDecl - Parse one top-level declaration. Returns true if
   /// the EOF was encountered.
   bool ParseTopLevelDecl(DeclGroupPtrTy &Result);
+
+
 
   /// ConsumeToken - Consume the current 'peek token' and lex the next one.
   /// This does not work with all kinds of tokens: strings and specific other
@@ -2118,7 +2129,7 @@ private:
                                    SourceLocation AttrFixitLoc,
                                    ParsedAttributesWithRange &Attrs,
                                    unsigned TagType,
-                                   Decl *TagDecl);
+                                   Decl *TagDecl, bool RogerMode = false);
   ExprResult ParseCXXMemberInitializer(Decl *D, bool IsFunction,
                                        SourceLocation &EqualLoc);
   void ParseCXXClassMemberDeclaration(AccessSpecifier AS, AttributeList *Attr,
@@ -2282,6 +2293,23 @@ private:
                                          MacroInfo *MacroInfo,
                                          unsigned ArgumentIndex);
   virtual void CodeCompleteNaturalLanguage();
+
+  // Roger
+private:
+  bool InRogerMode;
+
+  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerDeclList, DeclContext *DC);
+  void ParseRogerNonTypeRegion(RogerNonType *nonType, int defaultVisibility, DeclContext *DC);
+  void ParseRogerClassDecl(RogerClassDecl *classDecl, int defaultVisibility);
+
+public:
+  void ParseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd);
+  void ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, int defaultVisibility, DeclContext *DC);
+
+  void ParseRogerPartOpt();
+
+  friend class clang::RogerParseScope;
+  friend class clang::RogerNestedTokensState;
 };
 
 }  // end namespace clang

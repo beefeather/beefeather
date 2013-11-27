@@ -206,6 +206,46 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
     CurLexerKind = CLK_TokenLexer;
 }
 
+struct Preprocessor::RogerStreamState {
+  CachedTokensTy Cached;
+  CachedTokensTy::size_type CachedPos;
+  BacktrackPositionsTy BacktrackPositions;
+  std::vector<IncludeStackInfo>::size_type IncludeMacroStackSize;
+  Token sentinelTok;
+  TokenLexer *sentinelTokenLexer;
+};
+
+Preprocessor::RogerStreamState *Preprocessor::EnterRogerTokenStream(const Token *Toks, unsigned NumToks,
+                                        bool OwnsTokens) {
+  RogerStreamState *state = new RogerStreamState;
+  state->Cached.swap(CachedTokens);
+  state->CachedPos = CachedLexPos;
+  CachedLexPos = 0;
+  state->BacktrackPositions.swap(BacktrackPositions);
+
+  state->sentinelTok.startToken();
+  state->sentinelTok.setKind(tok::eof);
+  EnterTokenStream(&state->sentinelTok, 1, true, false);
+  state->sentinelTokenLexer = CurTokenLexer.get();
+  EnterTokenStream(Toks, NumToks, true, false);
+
+  state->IncludeMacroStackSize = IncludeMacroStack.size();
+  RogerStreamStates.push_back(state);
+  return state;
+}
+
+void Preprocessor::ExitRogerTokenStream(RogerStreamState *state) {
+  assert(!RogerStreamStates.empty() && RogerStreamStates.back() == state);
+  RogerStreamStates.pop_back();
+  assert(state->IncludeMacroStackSize - 1 == IncludeMacroStack.size());
+  assert(state->sentinelTokenLexer == CurTokenLexer.get());
+  state->BacktrackPositions.swap(BacktrackPositions);
+  CachedLexPos = state->CachedPos;
+  state->Cached.swap(CachedTokens);
+  delete state;
+}
+
+
 /// \brief Compute the relative path that names the given file relative to
 /// the given directory.
 static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,

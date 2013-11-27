@@ -325,6 +325,9 @@ KEYWORD(nullptr                     , KEYCXX11)
 KEYWORD(static_assert               , KEYCXX11)
 KEYWORD(thread_local                , KEYCXX11)
 
+// Roger keywords
+KEYWORD(capybara,                     KEYCXX)
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)

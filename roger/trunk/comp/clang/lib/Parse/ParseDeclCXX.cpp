@@ -2456,7 +2456,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
 void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          SourceLocation AttrFixitLoc,
                                          ParsedAttributesWithRange &Attrs,
-                                         unsigned TagType, Decl *TagDecl) {
+                                         unsigned TagType, Decl *TagDecl, bool RogerMode) {
   assert((TagType == DeclSpec::TST_struct ||
          TagType == DeclSpec::TST_interface ||
          TagType == DeclSpec::TST_union  ||
@@ -2544,6 +2544,11 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   assert(Tok.is(tok::l_brace));
+
+
+  if (!RogerMode) {
+  // } anti-diff
+
   BalancedDelimiterTracker T(*this, tok::l_brace);
   T.consumeOpen();
 
@@ -2615,11 +2620,11 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         } else if (Tok.is(tok::semi)) {
           EndLoc = Tok.getLocation();
           ConsumeToken();
-          Diag(EndLoc, diag::err_expected_colon) 
+          Diag(EndLoc, diag::err_expected_colon)
             << FixItHint::CreateReplacement(EndLoc, ":");
         } else {
           EndLoc = ASLoc.getLocWithOffset(TokLength);
-          Diag(EndLoc, diag::err_expected_colon) 
+          Diag(EndLoc, diag::err_expected_colon)
             << FixItHint::CreateInsertion(EndLoc, ":");
         }
 
@@ -2656,7 +2661,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
 
   if (TagDecl)
     Actions.ActOnFinishCXXMemberSpecification(getCurScope(), RecordLoc, TagDecl,
-                                              T.getOpenLocation(), 
+                                              T.getOpenLocation(),
                                               T.getCloseLocation(),
                                               attrs.getList());
 
@@ -2683,8 +2688,11 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   if (TagDecl)
-    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, 
+    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl,
                                      T.getCloseLocation());
+  // { anti-diff
+  }
+
 
   // Leave the class scope.
   ParsingDef.Pop();

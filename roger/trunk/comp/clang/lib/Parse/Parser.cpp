@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
 #include "clang/Parse/Parser.h"
 #include "ParsePragma.h"
 #include "RAIIObjectsForParser.h"
@@ -20,7 +21,9 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Frontend/Utils.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Program.h"
 using namespace clang;
 
 
@@ -52,7 +55,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   : PP(pp), Actions(actions), Diags(PP.getDiagnostics()),
     GreaterThanIsOperator(true), ColonIsSacred(false), 
     InMessageExpression(false), TemplateParameterDepth(0),
-    ParsingInObjCContainer(false) {
+    ParsingInObjCContainer(false), InRogerMode(false) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);
@@ -569,7 +572,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     HandlePragmaUnused();
 
   Result = DeclGroupPtrTy();
-  if (Tok.is(tok::eof)) {
+  if (Tok.is(tok::eof) || Tok.is(tok::kw_capybara)) {
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
       Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
@@ -989,10 +992,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   // In delayed template parsing mode, for function template we consume the
   // tokens and store them for late parsing at the end of the translation unit.
-  if (getLangOpts().DelayedTemplateParsing &&
-      Tok.isNot(tok::equal) &&
-      TemplateInfo.Kind == ParsedTemplateInfo::Template) {
-    MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
+  bool skipBecauseTemplate = getLangOpts().DelayedTemplateParsing &&
+      TemplateInfo.Kind == ParsedTemplateInfo::Template;
+  if (Tok.isNot(tok::equal) && (skipBecauseTemplate || InRogerMode)) {
+    TemplateParameterList **TemplateParamsBegin;
+    size_t TemplateParamsSize = 0;
+    if (TemplateInfo.TemplateParams) {
+      TemplateParamsBegin = TemplateInfo.TemplateParams->data();
+      TemplateParamsSize = TemplateInfo.TemplateParams->size();
+    } else {
+      // Must be roger mode.
+    }
+    MultiTemplateParamsArg TemplateParameterLists(TemplateParamsBegin, TemplateParamsSize);
     
     ParseScope BodyScope(this, Scope::FnScope|Scope::DeclScope);
     Scope *ParentScope = getCurScope()->getParent();
@@ -1015,6 +1026,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
       Actions.CheckForFunctionRedefinition(FnD);
       Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
+      FnD->RogerPlannedForLateParsing = !skipBecauseTemplate;
     }
     return DP;
   }

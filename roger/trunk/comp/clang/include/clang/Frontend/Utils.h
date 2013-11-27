@@ -48,6 +48,7 @@ class SourceManager;
 class Stmt;
 class TargetInfo;
 class FrontendOptions;
+class Token;
 
 /// Apply the header search options to get given HeaderSearch object.
 void ApplyHeaderSearchOptions(HeaderSearch &HS,
@@ -100,6 +101,7 @@ void AttachHeaderIncludeGen(Preprocessor &PP, bool ShowAllHeaders = false,
 /// CacheTokens - Cache tokens for use with PCH. Note that this requires
 /// a seekable stream.
 void CacheTokens(Preprocessor &PP, llvm::raw_fd_ostream* OS);
+void CacheTokensRoger(SmallVector<Token, 4> &tokens, llvm::raw_fd_ostream* OS);
 
 /// createInvocationFromCommandLine - Construct a compiler invocation object for
 /// a command line argument vector.

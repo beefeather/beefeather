@@ -892,7 +892,7 @@ bool Type::isConstantSizeType() const {
 /// isIncompleteType - Return true if this is an incomplete type (C99 6.2.5p1)
 /// - a type that can describe objects, but which lacks information needed to
 /// determine its size.
-bool Type::isIncompleteType(NamedDecl **Def) const {
+bool Type::isIncompleteType(NamedDecl **Def, bool requireRogerParsing) const {
   if (Def)
     *Def = 0;
   
@@ -919,7 +919,16 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     RecordDecl *Rec = cast<RecordType>(CanonicalType)->getDecl();
     if (Def)
       *Def = Rec;
-    return !Rec->isCompleteDefinition();
+    bool res = !Rec->isCompleteDefinition();
+    if (!res && requireRogerParsing) {
+      if (Rec->rogerCompleteTypeCallback) {
+        Rec->rogerCompleteTypeCallback->parseDeferred();
+        delete Rec->rogerCompleteTypeCallback;
+        Rec->rogerCompleteTypeCallback = 0;
+        res = !Rec->isCompleteDefinition();
+      }
+    }
+    return res;
   }
   case ConstantArray:
     // An array is incomplete if its element type is incomplete

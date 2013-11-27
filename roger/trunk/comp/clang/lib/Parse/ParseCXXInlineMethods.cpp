@@ -113,6 +113,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
   // In delayed template parsing mode, if we are within a class template
   // or if we are about to parse function member template then consume
   // the tokens and store them for parsing at the end of the translation unit.
+
   if (getLangOpts().DelayedTemplateParsing &&
       DefinitionKind == FDK_Definition &&
       ((Actions.CurContext->isDependentContext() ||
@@ -122,6 +123,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
 
     CachedTokens Toks;
     LexTemplateFunctionForLateParsing(Toks);
+
+    // Add roger logic here.
 
     if (FnD) {
       FunctionDecl *FD = getFunctionDecl(FnD);

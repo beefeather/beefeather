@@ -1919,7 +1919,8 @@ NamespaceDecl::NamespaceDecl(DeclContext *DC, bool Inline,
                              SourceLocation IdLoc, IdentifierInfo *Id,
                              NamespaceDecl *PrevDecl)
   : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
-    LocStart(StartLoc), RBraceLoc(), AnonOrFirstNamespaceAndInline(0, Inline) 
+    LocStart(StartLoc), RBraceLoc(), AnonOrFirstNamespaceAndInline(0, Inline),
+    IsRogerNamespace(false)
 {
   setPreviousDeclaration(PrevDecl);
   

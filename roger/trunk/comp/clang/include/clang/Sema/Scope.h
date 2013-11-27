@@ -342,6 +342,10 @@ public:
   /// Init - This is used by the parser to implement scope caching.
   ///
   void Init(Scope *parent, unsigned flags);
+
+  void TweakParent(Scope *parent) {
+    this->AnyParent = parent;
+  }
 };
 
 }  // end namespace clang

@@ -3324,7 +3324,8 @@ void EnumDecl::setInstantiationOfMemberEnum(ASTContext &C, EnumDecl *ED,
 RecordDecl::RecordDecl(Kind DK, TagKind TK, DeclContext *DC,
                        SourceLocation StartLoc, SourceLocation IdLoc,
                        IdentifierInfo *Id, RecordDecl *PrevDecl)
-  : TagDecl(DK, TK, DC, IdLoc, Id, PrevDecl, StartLoc) {
+  : TagDecl(DK, TK, DC, IdLoc, Id, PrevDecl, StartLoc)
+  , rogerCompleteTypeCallback(0) {
   HasFlexibleArrayMember = false;
   AnonymousStructOrUnion = false;
   HasObjectMember = false;

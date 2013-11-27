@@ -454,6 +454,9 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+
+  // Roger.
+  bool IsRogerNamespace;
 };
 
 /// ValueDecl - Represent the declaration of a variable (in which case it is
@@ -1548,7 +1551,8 @@ protected:
       IsConstexpr(isConstexprSpecified), HasSkippedBody(false),
       EndRangeLoc(NameInfo.getEndLoc()),
       TemplateOrSpecialization(),
-      DNLoc(NameInfo.getInfo()) {}
+      DNLoc(NameInfo.getInfo()),
+      RogerPlannedForLateParsing(false) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   virtual FunctionDecl *getNextRedeclaration() { return RedeclLink.getNext(); }
@@ -2103,6 +2107,11 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+
+
+  // Roger.
+public:
+  bool RogerPlannedForLateParsing;
 };
 
 
@@ -3118,6 +3127,8 @@ public:
   /// be turned on with an attribute, pragma, or -mms-bitfields
   /// commandline option.
   bool isMsStruct(const ASTContext &C) const;
+
+  RogerItemizedLateParseCallback* rogerCompleteTypeCallback;
 
 private:
   /// \brief Deserialize just the fields.

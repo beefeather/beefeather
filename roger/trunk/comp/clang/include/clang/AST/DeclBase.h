@@ -18,6 +18,8 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -76,6 +78,14 @@ namespace clang {
     AR_Deprecated,
     AR_Unavailable
   };
+
+  class RogerItemizedLateParseCallback {
+  public:
+    virtual ~RogerItemizedLateParseCallback() {}
+    virtual void parseDeferred() = 0;
+  };
+
+
 
 /// Decl - This represents one declaration (or definition), e.g. a variable,
 /// typedef, function, struct, etc.
@@ -1044,7 +1054,7 @@ protected:
       : DeclKind(K), ExternalLexicalStorage(false),
         ExternalVisibleStorage(false),
         NeedToReconcileExternalVisibleStorage(false), LookupPtr(0, false),
-        FirstDecl(0), LastDecl(0) {}
+        FirstDecl(0), LastDecl(0), RogerNameFillCallback(0) {}
 
 public:
   ~DeclContext();
@@ -1628,6 +1638,19 @@ private:
   void makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
                                          bool Rediscoverable);
   void makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal);
+public:
+
+  RogerItemizedLateParseCallback *RogerNameFillCallback;
+
+  struct UnparsedNamedDecl : public llvm::ilist_node<UnparsedNamedDecl> {
+    IdentifierInfo *name;
+    RogerItemizedLateParseCallback *callback;
+    bool beingCompiled;
+    UnparsedNamedDecl() : beingCompiled(false) {}
+  };
+
+  // roger
+  llvm::ilist<UnparsedNamedDecl> unparsedDecls;
 };
 
 inline bool Decl::isTemplateParameter() const {

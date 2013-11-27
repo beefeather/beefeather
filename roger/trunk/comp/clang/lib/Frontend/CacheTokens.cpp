@@ -650,3 +650,25 @@ std::pair<Offset,Offset> PTHWriter::EmitIdentifierTable() {
 
   return std::make_pair(IDOff, StringTableOffset);
 }
+
+void clang::CacheTokensRoger(SmallVector<Token, 4> &tokens, llvm::raw_fd_ostream* OS) {
+  for (SmallVector<Token, 4>::iterator it = tokens.begin(); it != tokens.end(); ++it) {
+    // Emit the token kind, flags, and length.
+    Token& T = *it;
+    ::Emit32(*OS, ((uint32_t) T.getKind()) | ((((uint32_t) T.getFlags())) << 8)|
+           (((uint32_t) T.getLength()) << 16));
+
+    if (T.isLiteral()) {
+      // We cache *un-cleaned* spellings. This gives us 100% fidelity with the
+      // source code.
+      StringRef s(T.getLiteralData(), T.getLength());
+
+      ::Emit16(*OS, s.size());
+      OS->write(s.data(), s.size());
+    } else if (T.is(tok::identifier)) {
+      IdentifierInfo *II = T.getIdentifierInfo();
+      ::Emit16(*OS, II->getLength());
+      OS->write(II->getNameStart(), II->getLength());
+    }
+  }
+}

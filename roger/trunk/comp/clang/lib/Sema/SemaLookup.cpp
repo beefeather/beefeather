@@ -611,7 +611,7 @@ static void DeclareImplicitMemberFunctionsWithName(Sema &S,
                                                    const DeclContext *DC) {
   if (!DC)
     return;
-
+  // Roger add lazy parsing here?
   switch (Name.getNameKind()) {
   case DeclarationName::CXXConstructorName:
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(DC))
@@ -657,8 +657,12 @@ static void DeclareImplicitMemberFunctionsWithName(Sema &S,
 
 // Adds all qualifying matches for a name within a decl context to the
 // given lookup result.  Returns true if any matches were found.
-static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
+static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC, DeclContext *mutableDC) {
   bool Found = false;
+
+  if (mutableDC) {
+    S.MaterializeRogerNames(R.getLookupName(), mutableDC);
+  }
 
   // Lazily declare C++ special member functions.
   if (S.getLangOpts().CPlusPlus)
@@ -757,7 +761,7 @@ CppNamespaceLookup(Sema &S, LookupResult &R, ASTContext &Context,
   assert(NS && NS->isFileContext() && "CppNamespaceLookup() requires namespace!");
 
   // Perform direct name lookup into the LookupCtx.
-  bool Found = LookupDirect(S, R, NS);
+  bool Found = LookupDirect(S, R, NS, NS);
 
   // Perform direct name lookup into the namespaces nominated by the
   // using directives whose common ancestor is this namespace.
@@ -765,7 +769,7 @@ CppNamespaceLookup(Sema &S, LookupResult &R, ASTContext &Context,
   llvm::tie(UI, UEnd) = UDirs.getNamespacesFor(NS);
 
   for (; UI != UEnd; ++UI)
-    if (LookupDirect(S, R, UI->getNominatedNamespace()))
+    if (LookupDirect(S, R, UI->getNominatedNamespace(), 0))
       Found = true;
 
   R.resolveKind();
@@ -881,6 +885,9 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, DC);
   }
+
+  MaterializeRogerNames(Name, S->getEntity());
+
 
   // Implicitly declare member functions with the name we're looking for, if in
   // fact we are in a scope where it matters.
@@ -1483,7 +1490,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
     // between LookupResults.
     bool UseLocal = !R.empty();
     LookupResult &DirectR = UseLocal ? LocalR : R;
-    bool FoundDirect = LookupDirect(S, DirectR, ND);
+    bool FoundDirect = LookupDirect(S, DirectR, ND, ND);
 
     if (FoundDirect) {
       // First do any local hiding.
@@ -1605,7 +1612,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
          "Declaration context must already be complete!");
 
   // Perform qualified name lookup into the LookupCtx.
-  if (LookupDirect(*this, R, LookupCtx)) {
+  if (LookupDirect(*this, R, LookupCtx, LookupCtx)) {
     R.resolveKind();
     if (isa<CXXRecordDecl>(LookupCtx))
       R.setNamingClass(cast<CXXRecordDecl>(LookupCtx));

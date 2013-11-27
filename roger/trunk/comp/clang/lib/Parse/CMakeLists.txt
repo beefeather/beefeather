@@ -12,6 +12,7 @@ add_clang_library(clangParse
   ParseStmt.cpp
   ParseTemplate.cpp
   ParseTentative.cpp
+  ParseRoger.cpp
   Parser.cpp
   )
 

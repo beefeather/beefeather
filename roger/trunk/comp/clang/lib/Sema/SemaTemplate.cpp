@@ -213,7 +213,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
           isa<VarTemplateDecl>(TD) ? TNK_Var_template : TNK_Type_template;
     }
   }
-
+  // Roger: call template parsing from here.
   TemplateResult = TemplateTy::make(Template);
   return TemplateKind;
 }

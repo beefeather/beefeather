@@ -5113,7 +5113,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
   // If we have a complete type, we're done.
   NamedDecl *Def = 0;
-  if (!T->isIncompleteType(&Def)) {
+  if (!T->isIncompleteType(&Def, true)) {
     // If we know about the definition but it is not visible, complain.
     if (!Diagnoser.Suppressed && Def && !LookupResult::isVisible(*this, Def)) {
       // Suppress this error outside of a SFINAE context if we've already

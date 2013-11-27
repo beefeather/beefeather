@@ -403,6 +403,15 @@ public:
     OpaqueParser = P;
   }
 
+  struct RogerOnDemandParserInt {
+    virtual void ParseFunction(LateParsedTemplate &LPT) = 0;
+  protected:
+    ~RogerOnDemandParserInt() {}
+  };
+  RogerOnDemandParserInt* RogerOnDemandParser;
+  void ActOnRogerModeStart(RogerOnDemandParserInt* RogerOnDemandParser);
+  void ActOnRogerModeFinish();
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -7499,6 +7508,23 @@ public:
 
   ExprResult ActOnBooleanCondition(Scope *S, SourceLocation Loc,
                                    Expr *SubExpr);
+
+  // Roger
+  void ActOnNamedDeclarationRoger(IdentifierInfo* Name, RogerItemizedLateParseCallback *callback);
+  void ActOnNamespaceFinishRoger(DeclContext* ns);
+
+  void MaterializeRogerNames(DeclarationName Name, DeclContext* dc);
+  void InstantiateFunctionDefinitionRoger(FunctionDecl *Function);
+
+  NamespaceDecl *ActOnRogerNamespaceDef(Scope *NamespcScope,
+      IdentifierInfo *II,
+      SourceLocation NameLoc,
+      RogerItemizedLateParseCallback *rogerCallback,
+      AttributeList *AttrList);
+
+
+
+
 
   /// DiagnoseAssignmentAsCondition - Given that an expression is
   /// being used as a boolean condition, warn if it's an assignment.

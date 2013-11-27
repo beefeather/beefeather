@@ -382,7 +382,8 @@ private:  // Cached tokens state.
   /// backtracks. The EnableBacktrackAtThisPos() method pushes a position to
   /// indicate where CachedLexPos should be set when the BackTrack() method is
   /// invoked (at which point the last position is popped).
-  std::vector<CachedTokensTy::size_type> BacktrackPositions;
+  typedef std::vector<CachedTokensTy::size_type> BacktrackPositionsTy;
+  BacktrackPositionsTy BacktrackPositions;
 
   struct MacroInfoChain {
     MacroInfo MI;
@@ -684,6 +685,14 @@ public:
   ///
   void EnterTokenStream(const Token *Toks, unsigned NumToks,
                         bool DisableMacroExpansion, bool OwnsTokens);
+
+  struct RogerStreamState;
+
+  RogerStreamState *EnterRogerTokenStream(const Token *Toks, unsigned NumToks,
+                                          bool OwnsTokens);
+
+  void ExitRogerTokenStream(RogerStreamState *state);
+
 
   /// RemoveTopOfLexerStack - Pop the current lexer/macro exp off the top of the
   /// lexer stack.  This should only be used in situations where the current
@@ -1116,6 +1125,8 @@ public:
 
 private:
   llvm::DenseMap<IdentifierInfo*,unsigned> PoisonReasons;
+
+  std::vector<RogerStreamState*> RogerStreamStates;
 
 public:
 
