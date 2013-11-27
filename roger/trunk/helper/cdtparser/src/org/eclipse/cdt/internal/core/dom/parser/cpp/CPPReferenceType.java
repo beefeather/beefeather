@@ -18,7 +18,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPReferenceType;
 import org.eclipse.cdt.internal.core.dom.parser.ISerializableType;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeContainer;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeMarshalBuffer;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CPPReferenceType implements ICPPReferenceType, ITypeContainer, ISerializableType {
     private IType fType = null;

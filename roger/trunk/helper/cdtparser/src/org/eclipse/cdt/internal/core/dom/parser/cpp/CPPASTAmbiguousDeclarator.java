@@ -24,7 +24,8 @@ import org.eclipse.cdt.core.parser.util.ArrayUtil;
 import org.eclipse.cdt.internal.core.dom.parser.ASTAmbiguousNode;
 import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousDeclarator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Handles ambiguities when parsing declarators.

@@ -45,7 +45,8 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPTemplates;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public abstract class CPPTemplateDefinition extends PlatformObject implements ICPPTemplateDefinition, ICPPInternalTemplate {
 	public static final class CPPTemplateProblem extends ProblemBinding implements ICPPTemplateDefinition {

@@ -20,7 +20,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPPointerToMemberType;
 import org.eclipse.cdt.internal.core.dom.parser.ISerializableType;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeContainer;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeMarshalBuffer;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Pointers in c++

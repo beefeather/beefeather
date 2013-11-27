@@ -20,9 +20,6 @@ import org.eclipse.cdt.core.model.ITranslationUnit;
 import org.eclipse.cdt.internal.core.parser.InternalParserUtil;
 import org.eclipse.cdt.internal.core.parser.scanner.CharArray;
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.IPath;
 
 /**
  * Abstract class for representing the content of a file.

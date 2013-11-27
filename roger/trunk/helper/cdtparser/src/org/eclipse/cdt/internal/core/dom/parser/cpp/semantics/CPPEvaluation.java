@@ -20,7 +20,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateArgument;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateParameterMap;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownBinding;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public abstract class CPPEvaluation implements ICPPEvaluation {
 

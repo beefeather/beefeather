@@ -26,6 +26,7 @@ import org.eclipse.cdt.core.index.IIndex;
 import org.eclipse.cdt.core.model.AbstractLanguage;
 import org.eclipse.cdt.core.model.ICLanguageKeywords;
 import org.eclipse.cdt.core.model.IContributedModelBuilder;
+import org.eclipse.cdt.core.model.ILexedContent;
 import org.eclipse.cdt.core.model.ITranslationUnit;
 import org.eclipse.cdt.core.parser.ExtendedScannerInfo;
 import org.eclipse.cdt.core.parser.FileContent;
@@ -37,9 +38,11 @@ import org.eclipse.cdt.core.parser.ParserLanguage;
 import org.eclipse.cdt.core.parser.ParserMode;
 import org.eclipse.cdt.internal.core.dom.parser.AbstractGNUSourceCodeParser;
 import org.eclipse.cdt.internal.core.parser.scanner.CPreprocessor;
+import org.eclipse.cdt.internal.core.parser.scanner.LexedContentReader;
 import org.eclipse.cdt.internal.core.util.ICancelable;
 import org.eclipse.cdt.internal.core.util.ICanceler;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This class provides a skeletal implementation of the ILanguage interface
@@ -157,6 +160,40 @@ public abstract class AbstractCLikeLanguage extends AbstractLanguage implements 
 		}
 	}
 
+	@Override
+	public IASTTranslationUnit getASTTranslationUnit(ILexedContent lexedContent,
+			IIndex index, int options, IParserLogService log)
+			throws CoreException {
+		final IScanner scanner= createScanner(lexedContent);
+		scanner.setComputeImageLocations((options & OPTION_NO_IMAGE_LOCATIONS) == 0);
+		scanner.setProcessInactiveCode((options & OPTION_PARSE_INACTIVE_CODE) != 0);
+
+		final ISourceCodeParser parser= createParser(scanner, log, index, false, options);
+
+		// Make it possible to cancel parser by reconciler - http://bugs.eclipse.org/226682
+		ICanceler canceler= null;
+		if (log instanceof ICanceler) {
+			canceler= (ICanceler) log;
+			canceler.setCancelable(new ICancelable() {
+				@Override
+				public void cancel() {
+					scanner.cancel();
+					parser.cancel();
+				}});
+		}
+
+		try {
+			// Parse
+			IASTTranslationUnit ast= parser.parse();
+			ast.setIsHeaderUnit((options & OPTION_IS_SOURCE_UNIT) == 0);
+			return ast;
+		} finally {
+			if (canceler != null) {
+				canceler.setCancelable(null);
+			}
+		}
+	}
+
 	@Deprecated
 	@Override
 	public IASTCompletionNode getCompletionNode(org.eclipse.cdt.core.parser.CodeReader reader,
@@ -230,6 +267,10 @@ public abstract class AbstractCLikeLanguage extends AbstractLanguage implements 
 		return new CPreprocessor(content, scanInfo, getParserLanguage(), log, getScannerExtensionConfiguration(scanInfo), fcp);
 	}
 
+	protected IScanner createScanner(ILexedContent lexedContent) {
+		return new LexedContentReader(lexedContent);
+	}
+
 	@Override
 	@Deprecated
 	public IASTName[] getSelectedNames(IASTTranslationUnit ast, int start, int length) {
@@ -266,13 +307,12 @@ public abstract class AbstractCLikeLanguage extends AbstractLanguage implements 
 		return cLanguageKeywords;
 	}
 
-	@Override
 	@SuppressWarnings("rawtypes")
 	public Object getAdapter(Class adapter) {
 		if (ICLanguageKeywords.class.equals(adapter))
 			return getCLanguageKeywords();
 		
-		return super.getAdapter(adapter);
+		return null;
 	}
 
 	// For backwards compatibility

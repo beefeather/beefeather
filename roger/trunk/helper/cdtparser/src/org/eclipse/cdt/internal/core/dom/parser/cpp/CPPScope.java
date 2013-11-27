@@ -45,9 +45,10 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPSemantics;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.LookupData;
 import org.eclipse.cdt.internal.core.parser.util.ContentAssistMatcherFactory;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.NullProgressMonitor;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.NullProgressMonitor;
 
 /**
  * Base class for c++-scopes of the AST.

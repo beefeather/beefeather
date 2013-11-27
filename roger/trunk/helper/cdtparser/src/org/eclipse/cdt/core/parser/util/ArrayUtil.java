@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.eclipse.core.runtime.Assert;
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * @noextend This class is not intended to be subclassed by clients.

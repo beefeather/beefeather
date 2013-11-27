@@ -20,8 +20,9 @@ import org.eclipse.cdt.core.dom.IName;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.IScope;
 import org.eclipse.cdt.core.parser.ISignificantMacros;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * Interface for accessing the index for one or more projects.

@@ -44,7 +44,8 @@ import org.eclipse.cdt.internal.core.dom.parser.IInternalVariable;
 import org.eclipse.cdt.internal.core.dom.parser.Value;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.SemanticUtil;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public class CPPVariable extends PlatformObject implements ICPPVariable, ICPPInternalBinding, IInternalVariable {
 	private IASTName fDefinition;

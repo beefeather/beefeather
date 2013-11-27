@@ -42,7 +42,8 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTInternal;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPScopeMapper.InlineNamespaceDirective;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Implementation of namespace scopes, including global scope.

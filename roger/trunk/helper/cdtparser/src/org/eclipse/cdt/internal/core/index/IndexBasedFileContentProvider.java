@@ -41,7 +41,8 @@ import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider;
 import org.eclipse.cdt.internal.core.pdom.ASTFilePathResolver;
 import org.eclipse.cdt.internal.core.pdom.AbstractIndexerTask;
 import org.eclipse.cdt.internal.core.pdom.AbstractIndexerTask.IndexFileContent;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Code reader factory, that fakes code readers for header files already stored in the index.

@@ -19,8 +19,9 @@ import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.index.IIndexBinding;
 import org.eclipse.cdt.core.index.IIndexFile;
 import org.eclipse.cdt.core.index.IIndexFileSet;
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class IndexFileSet implements IIndexFileSet {
 	private IIndexFileSet fInverse;

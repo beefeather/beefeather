@@ -14,7 +14,8 @@ package org.eclipse.cdt.core.index;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.internal.core.index.IIndexFragment;
 import org.eclipse.cdt.internal.core.index.IndexFileSet;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * File set for index files. Can be used to filter file-local bindings.

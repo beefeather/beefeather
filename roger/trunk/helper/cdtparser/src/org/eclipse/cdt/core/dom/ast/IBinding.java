@@ -17,7 +17,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPNamespace;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateDefinition;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateParameter;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPUsingDeclaration;
-import org.eclipse.core.runtime.IAdaptable;
+
+import ru.spb.rybin.eclipsereplacement.IAdaptable;
 
 /**
  * Represents the semantics of a name found in the AST or the index.

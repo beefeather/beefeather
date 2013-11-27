@@ -19,7 +19,8 @@ import org.eclipse.cdt.core.index.IIndexFileSet;
 import org.eclipse.cdt.core.model.ITranslationUnit;
 import org.eclipse.cdt.core.parser.ISignificantMacros;
 import org.eclipse.cdt.core.parser.ParserLanguage;
-import org.eclipse.core.runtime.IAdaptable;
+
+import ru.spb.rybin.eclipsereplacement.IAdaptable;
 
 /**
  * The translation unit represents a compilable unit of source.

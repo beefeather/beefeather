@@ -49,7 +49,8 @@ import org.eclipse.cdt.internal.core.parser.scanner.ISkippedIndexedFilesListener
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent;
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider;
 import org.eclipse.cdt.internal.core.parser.scanner.Lexer.LexerOptions;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Abstract base class for all translation units.

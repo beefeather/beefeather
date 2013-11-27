@@ -62,13 +62,8 @@ import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider;
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider.DependsOnOutdatedFileException;
 import org.eclipse.cdt.internal.core.parser.util.LRUCache;
 import org.eclipse.cdt.utils.EFSExtensionManager;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.osgi.util.NLS;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Task for the actual indexing. Various indexers need to implement the abstract methods.

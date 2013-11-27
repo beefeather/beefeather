@@ -12,7 +12,8 @@
 package org.eclipse.cdt.core.index;
 
 import org.eclipse.cdt.core.dom.IName;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for all the names in the index. These constitute either a

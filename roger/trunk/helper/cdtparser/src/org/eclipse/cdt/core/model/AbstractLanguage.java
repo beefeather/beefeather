@@ -19,14 +19,14 @@ import org.eclipse.cdt.core.parser.IParserLogService;
 import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.internal.core.parser.CodeReaderAdapter;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Models the differences between various languages.
  * @since 4.0
  */
-public abstract class AbstractLanguage extends PlatformObject implements ILanguage {
+public abstract class AbstractLanguage implements ILanguage {
 	@Override
 	public String getName() {
 		ILanguageDescriptor languageDescriptor= LanguageManager.getInstance().getLanguageDescriptor(getId());

@@ -40,7 +40,8 @@ import org.eclipse.cdt.internal.core.dom.Linkage;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public class CPPNamespace extends PlatformObject implements ICPPNamespace, ICPPInternalBinding {
 

@@ -25,7 +25,8 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.eclipse.cdt.internal.core.dom.parser.IASTInternalNameOwner;
 import org.eclipse.cdt.internal.core.dom.parser.IRecursionResolvingBinding;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Common base class for all sorts of c++ names: unqualified, qualified, operator and conversion

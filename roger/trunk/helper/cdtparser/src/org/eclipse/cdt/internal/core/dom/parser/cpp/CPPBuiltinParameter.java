@@ -19,7 +19,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPFunctionType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPParameter;
 import org.eclipse.cdt.core.parser.util.CharArrayUtils;
 import org.eclipse.cdt.internal.core.dom.Linkage;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public class CPPBuiltinParameter extends PlatformObject implements ICPPParameter {
 	public static ICPPParameter[] createParameterList(ICPPFunctionType ft) {

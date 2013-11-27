@@ -47,7 +47,8 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPSemantics;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.SemanticUtil;
 import org.eclipse.cdt.internal.core.parser.util.ContentAssistMatcherFactory;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Qualified name, which can contain any other name (unqualified, operator-name, conversion name, 

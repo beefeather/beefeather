@@ -223,7 +223,8 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.Conversions.Contex
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.Conversions.UDCMode;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.Cost.Rank;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Name resolution

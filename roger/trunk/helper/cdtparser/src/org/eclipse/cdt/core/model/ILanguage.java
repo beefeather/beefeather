@@ -23,8 +23,8 @@ import org.eclipse.cdt.core.parser.FileContent;
 import org.eclipse.cdt.core.parser.IParserLogService;
 import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IAdaptable;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Models differences between languages. The interface is not supposed to be implemented directly.
@@ -33,7 +33,7 @@ import org.eclipse.core.runtime.IAdaptable;
  * @noimplement This interface is not intended to be implemented by clients.
  * @noextend This interface is not intended to be extended by clients.
  */
-public interface ILanguage extends IAdaptable {
+public interface ILanguage {
 
 	/**
 	 * Option for {@link #getASTTranslationUnit(FileContent, IScannerInfo, IncludeFileContentProvider, IIndex, int, IParserLogService)}
@@ -121,6 +121,11 @@ public interface ILanguage extends IAdaptable {
 	public IASTTranslationUnit getASTTranslationUnit(FileContent content, IScannerInfo scanInfo,
 			IncludeFileContentProvider fileCreator, IIndex index, int options, IParserLogService log)
 			throws CoreException;
+	
+	public IASTTranslationUnit getASTTranslationUnit(ILexedContent lexedContent,
+			IIndex index, int options, IParserLogService log)
+			throws CoreException;
+	
 	
 	/**
 	 * Return the AST completion node for the given offset.
