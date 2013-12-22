@@ -150,6 +150,9 @@ public interface IASTNode {
      * @return the raw signature of the IASTNode before it is processed by the preprocessor
      */
     public String getRawSignature();
+    
+    public IToken getRawToken(int offset);
+
 
     /**
      * Returns whether this node contains the given one. The decision is made

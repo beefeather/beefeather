@@ -91,6 +91,7 @@ import org.eclipse.cdt.core.parser.ParseError;
 import org.eclipse.cdt.core.parser.ParserMode;
 import org.eclipse.cdt.core.parser.util.CharArrayUtils;
 import org.eclipse.cdt.core.parser.util.CollectionUtils;
+import org.eclipse.cdt.internal.core.dom.rewrite.astwriter.DeclSpecWriter;
 import org.eclipse.cdt.internal.core.parser.scanner.ILocationResolver;
 
 /**
@@ -1780,13 +1781,13 @@ public abstract class AbstractGNUSourceCodeParser implements ISourceCodeParser {
     	return funcDefinition;
 	}
 
-	protected abstract IASTInitializer optionalInitializer(IASTDeclarator dtor, DeclarationOptions options)
+	protected abstract IASTInitializer optionalInitializer(IASTDeclarator dtor, DeclarationOptions options, IASTDeclSpecifier declspec)
 			throws EndOfFileException, BacktrackException;
 
 	protected IASTDeclarator addInitializer(FoundAggregateInitializer e, DeclarationOptions options)
 			throws EndOfFileException, BacktrackException {
 	    final IASTDeclarator d = e.fDeclarator;
-	    IASTInitializer i = optionalInitializer(d, options);
+	    IASTInitializer i = optionalInitializer(d, options, null);
 	    if (i != null) {
 	    	d.setInitializer(i);
 	    	((ASTNode) d).setLength(calculateEndOffset(i) - ((ASTNode) d).getOffset());

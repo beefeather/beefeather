@@ -14,12 +14,16 @@ public class Assert {
 		}
 	}
 
-	public static boolean  isLegal(boolean b) {
+	public static boolean isLegal(boolean b, String message) {
 		if (b) {
 			return true;
 		} else { 
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException(message);
 		}
+	}
+
+	public static boolean isLegal(boolean b) {
+		return isLegal(b, null);
 	}
 
 }

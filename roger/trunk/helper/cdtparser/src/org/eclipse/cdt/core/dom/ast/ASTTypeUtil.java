@@ -50,7 +50,8 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownMemberClassInstan
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.SemanticUtil;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This is a utility class to help convert AST elements to Strings corresponding to

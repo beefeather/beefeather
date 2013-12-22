@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.cdt.core.dom.ast.ExpansionOverlapsBoundaryException;
+import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarationListOwner;
@@ -19,11 +21,15 @@ import org.eclipse.cdt.core.dom.ast.IASTFunctionDefinition;
 import org.eclipse.cdt.core.dom.ast.IASTName;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTNodeLocation;
+import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConversionName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceDefinition;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTOperatorName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateDeclaration;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndex;
@@ -31,12 +37,14 @@ import org.eclipse.cdt.core.model.ILexedContent;
 import org.eclipse.cdt.core.parser.FileContent;
 import org.eclipse.cdt.core.parser.IParserLogService;
 import org.eclipse.cdt.core.parser.IScannerInfo;
+import org.eclipse.cdt.core.parser.IToken;
 import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.cdt.internal.core.parser.EmptyFilesProvider;
 
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.*;
-import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.Region;
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.Region.Visitor;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.TokenRange;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.UsingRegion;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class Main {
@@ -163,6 +171,11 @@ public class Main {
 					FunctionRegion region = dumpFunctionDefinition(functionDef, currentVisibility, printer);
 					regions.add(region);
 					other = false;
+				} else if (d instanceof ICPPASTUsingDeclaration) {
+					ICPPASTUsingDeclaration usingDecl = (ICPPASTUsingDeclaration) d;
+					UsingRegion region = dumpUsingDeclaration(usingDecl, currentVisibility, printer);
+					regions.add(region);
+					other = false;
 				} else {
 					Collection<? extends Region> typeRegions = dumpTypeItem(d, currentVisibility, printer);
 					if (typeRegions == null) {
@@ -200,7 +213,73 @@ public class Main {
 	private static FunctionRegion dumpFunctionDefinition(final IASTFunctionDefinition functionDef, final Integer currentVisibility, Printer printer) {
 		IASTFunctionDeclarator declarator = functionDef.getDeclarator();
 		final IASTName name = declarator.getName();
-		printer.println("<function name=" + name.getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " declaration=" + getLocationString(functionDef));
+		if (name.isQualified()) {
+			throw new RuntimeException("Unexpected qualified name");
+		}
+		
+		final DeclarationName declarationName;
+		if (name instanceof ICPPASTOperatorName) {
+			final ICPPASTOperatorName operatorName = (ICPPASTOperatorName) name;
+			final boolean isArray = operatorName.getNodeLocations()[0].getNodeLength() == 4 && operatorName.getRawToken(2).getType() == IToken.tLBRACE;
+			declarationName = new DeclarationName.Operator() {
+				@Override public <R> R accept(Visitor<R> visitor) {
+					return visitor.visitOpeartor(this);
+				}
+				@Override public int codeToken() {
+					return operatorName.getNodeLocations()[0].getNodeOffset() + 1;
+				}
+				@Override public boolean isArray() {
+					return isArray;
+				}
+			};
+		} else if (name instanceof ICPPASTConversionName) {
+			declarationName = new DeclarationName.Conversion() {
+				@Override public <R> R accept(Visitor<R> visitor) {
+					return visitor.visitConversion(this);
+				}
+			};
+		} else if (name.getNodeLocations()[0].getNodeLength() == 2 && name.getRawToken(0).getType() == IToken.tBITCOMPLEMENT) {
+			declarationName = new DeclarationName.Destructor() {
+				@Override public <R> R accept(Visitor<R> visitor) {
+					return visitor.visitDestructor(this);
+				}
+			};
+		} else {
+			declarationNameDone: {
+				IASTDeclSpecifier declSpec = functionDef.getDeclSpecifier();
+				if (name.getNodeLocations()[0].getNodeLength() == 1) {
+					if (declSpec instanceof IASTSimpleDeclSpecifier) {
+						IASTSimpleDeclSpecifier simpleDeclSpecifier = (IASTSimpleDeclSpecifier) declSpec;
+						if (simpleDeclSpecifier.getType() == IASTSimpleDeclSpecifier.sc_unspecified) {
+							if (functionDef.getParent() instanceof IASTCompositeTypeSpecifier) {
+								IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier) functionDef.getParent();
+								String className = compositeTypeSpecifier.getName().getRawSignature();
+								String funName = name.getRawSignature();
+								if (funName.equals(className)) {
+									declarationName = new DeclarationName.Constructor() {
+										@Override public <R> R accept(Visitor<R> visitor) {
+											return visitor.visitConstructor(this);
+										}
+									};
+									break declarationNameDone;
+								}
+							}
+						}
+		    		}
+				}
+				declarationName = new DeclarationName.Plain() {
+					@Override public <R> R accept(Visitor<R> visitor) {
+						return visitor.visitPlain(this);
+					}
+					@Override
+					public int token() {
+						return createSingleTokenPosition(name);
+					}
+				};
+			}
+		}
+		
+		printer.println("<function name=" + name.toString() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " declaration=" + getLocationString(functionDef));
 		return new FunctionRegion() {
 			@Override public <T> T accept(Visitor<T> visitor) {
 				return visitor.visitFunction(this);
@@ -208,11 +287,26 @@ public class Main {
 			@Override public Integer visibility() {
 				return currentVisibility;
 			}
-			@Override public int nameToken() {
-				return createSingleTokenPosition(name);
+			@Override public DeclarationName name() {
+				return declarationName;
 			}
 			@Override public TokenRange declaration() {
 				return createRange(functionDef);
+			}
+		};
+	}
+	
+	private static UsingRegion dumpUsingDeclaration(final ICPPASTUsingDeclaration usingDecl, final Integer currentVisibility, Printer printer) {
+		printer.println("<using visibility=" + currentVisibility + " declaration=" + getLocationString(usingDecl));
+		return new UsingRegion() {
+			@Override public <T> T accept(Visitor<T> visitor) {
+				return visitor.visitUsing(this);
+			}
+			@Override public Integer visibility() {
+				return currentVisibility;
+			}
+			@Override public TokenRange declaration() {
+				return createRange(usingDecl);
 			}
 		};
 	}

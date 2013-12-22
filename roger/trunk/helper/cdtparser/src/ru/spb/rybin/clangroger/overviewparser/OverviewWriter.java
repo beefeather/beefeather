@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
-import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.FunctionRegion;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Constructor;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Conversion;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Destructor;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Operator;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Plain;
 
 class OverviewWriter {
   static void write(File data, final OutputStream output) {
@@ -64,6 +68,12 @@ class OverviewWriter {
 					writeNamespace(namespaceRegion);
 					return null;
 				}
+				
+				@Override
+				public Void visitUsing(UsingRegion usingRegion) {
+					writeUsing(usingRegion);
+					return null;
+				}
 			});
 		}
 		private void writeNonType(NonTypeRegion nonTypeRegion) {
@@ -95,7 +105,40 @@ class OverviewWriter {
 		private void writeFunction(FunctionRegion functionRegion) {
 			writeByte((byte) 4);
 			writeVisibility(functionRegion.visibility());
-			writeInt16(functionRegion.nameToken());
+			functionRegion.name().accept(new DeclarationName.Visitor<Void>() {
+				@Override
+				public Void visitPlain(Plain plain) {
+					writeByte((byte) 0);
+					writeInt16(plain.token());
+					return null;
+				}
+
+				@Override
+				public Void visitOpeartor(Operator operator) {
+					int code = operator.isArray() ? 2 : 1;
+					writeByte((byte) code);
+					writeInt16(operator.codeToken());
+					return null;
+				}
+
+				@Override
+				public Void visitConversion(Conversion conversion) {
+					writeByte((byte) 3);
+					return null;
+				}
+
+				@Override
+				public Void visitConstructor(Constructor constructor) {
+					writeByte((byte) 4);
+					return null;
+				}
+
+				@Override
+				public Void visitDestructor(Destructor destructor) {
+					writeByte((byte) 5);
+					return null;
+				}
+			});
 			writeRange(functionRegion.declaration());
 		}
 		private void writeNamespace(NamespaceRegion namespaceRegion) {
@@ -105,6 +148,12 @@ class OverviewWriter {
 				writeRegion(r);
 			}
 			writeByte((byte) 0);
+		}
+		
+		private void writeUsing(UsingRegion usingRegion) {
+			writeByte((byte) 6);
+			writeVisibility(usingRegion.visibility());
+			writeRange(usingRegion.declaration());
 		}
 		
 		private void writeVisibility(Integer visibility) {
@@ -167,6 +216,7 @@ class OverviewWriter {
 		  T visitClass(ClassRegion classRegion);
           T visitFunction(FunctionRegion functionRegion);
           T visitNamespace(NamespaceRegion namespaceRegion);
+          T visitUsing(UsingRegion usingRegion);
 	  }
   }
   
@@ -186,7 +236,7 @@ class OverviewWriter {
   
   interface FunctionRegion extends Region {
 	  Integer visibility();
-	  int nameToken();
+	  DeclarationName name();
 	  TokenRange declaration();
   }
 
@@ -202,6 +252,36 @@ class OverviewWriter {
   interface NamespaceRegion extends Region {
 	  int nameToken();
 	  List<? extends Region> innerRegions();
+  }
+  
+  interface UsingRegion extends Region {
+	  Integer visibility();
+	  TokenRange declaration();
+  }
+
+  interface DeclarationName {
+	  interface Plain extends DeclarationName {
+		  int token();
+	  }
+	  interface Operator extends DeclarationName {
+		  int codeToken();
+		  boolean isArray();
+	  }
+	  interface Conversion extends DeclarationName {
+	  }
+	  interface Constructor extends DeclarationName {
+	  }
+	  interface Destructor extends DeclarationName {
+	  }
+	  
+	  interface Visitor<R> {
+		  R visitPlain(Plain plain);
+		  R visitOpeartor(Operator operator);
+		  R visitConversion(Conversion conversion);
+		  R visitConstructor(Constructor constructor);
+		  R visitDestructor(Destructor destructor);
+	  }
+	  <R> R accept(Visitor<R> visitor);
   }
   
   interface TokenRange {

@@ -172,6 +172,21 @@ public abstract class ASTNode implements IASTNode {
         }
         return CharArrayUtils.EMPTY;
     }
+    
+    public IToken getRawToken(int offset) {
+    	final IASTFileLocation floc= getFileLocation();
+    	if (floc.getNodeLength() <= offset) {
+    		throw new IllegalArgumentException();
+    	}
+        final IASTTranslationUnit ast = getTranslationUnit();
+        if (floc != null && ast != null) {
+        	ILocationResolver lr= (ILocationResolver) ast.getAdapter(ILocationResolver.class);
+        	if (lr != null) {
+        		return lr.getUnpreprocessedToken(floc, offset);
+        	}
+        }
+		throw new RuntimeException();
+    }
 
     @Override
 	public String getRawSignature() {

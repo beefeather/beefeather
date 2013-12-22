@@ -3220,7 +3220,7 @@ public class GNUCPPSourceParser extends AbstractGNUSourceCodeParser {
     		bt= e;
     	}
 
-    	if (!option.fAllowCtorStyleInitializer || !canHaveConstructorInitializer(declspec, dtor1)) {
+    	if (!rogerAllowCtorStyleInitializer(option, declspec) || !canHaveConstructorInitializer(declspec, dtor1)) {
     		if (bt != null)
     			throw bt;
     		return dtor1;
@@ -3296,6 +3296,11 @@ public class GNUCPPSourceParser extends AbstractGNUSourceCodeParser {
 			throwBacktrack(node.getOffset(), node.getLength());
 		}
 	}
+	
+	private static boolean rogerAllowCtorStyleInitializer(DeclarationOptions option, IASTDeclSpecifier declspec) {
+    	return option.fAllowCtorStyleInitializer ||
+    			(declspec != null && declspec.getStorageClass() == IASTDeclSpecifier.sc_static);
+	}
 
 	private boolean canHaveConstructorInitializer(IASTDeclSpecifier declspec, IASTDeclarator dtor) {
 		if (declspec instanceof ICPPASTDeclSpecifier) {
@@ -3365,7 +3370,7 @@ public class GNUCPPSourceParser extends AbstractGNUSourceCodeParser {
 				if (LTcatchEOF(1) == IToken.tASSIGN && LTcatchEOF(2) == IToken.tLBRACE)
 					throw new FoundAggregateInitializer(declspec, dtor);
 
-				IASTInitializer initializer= optionalInitializer(dtor, option);
+				IASTInitializer initializer= optionalInitializer(dtor, option, declspec);
 				if (initializer != null) {
 					if (initializer instanceof IASTInitializerList
 							&& ((IASTInitializerList) initializer).getSize() == 0) {
@@ -3427,9 +3432,10 @@ public class GNUCPPSourceParser extends AbstractGNUSourceCodeParser {
      * brace-or-equal-initializer:
      *    = initializer-clause
      *    braced-init-list
+	 * @param declspec 
      */
     @Override
-	protected IASTInitializer optionalInitializer(IASTDeclarator dtor, DeclarationOptions option) throws EndOfFileException, BacktrackException {
+	protected IASTInitializer optionalInitializer(IASTDeclarator dtor, DeclarationOptions option, IASTDeclSpecifier declspec) throws EndOfFileException, BacktrackException {
     	final int lt1= LTcatchEOF(1);
 
     	// = initializer-clause
@@ -3452,7 +3458,7 @@ public class GNUCPPSourceParser extends AbstractGNUSourceCodeParser {
         }
 
         // ( expression-list )
-        if (option.fAllowCtorStyleInitializer && lt1 == IToken.tLPAREN) {
+        if (rogerAllowCtorStyleInitializer(option, declspec) && lt1 == IToken.tLPAREN) {
             return ctorStyleInitializer(false);
         }
         return null;

@@ -25,6 +25,7 @@ import org.eclipse.cdt.core.dom.ast.IASTProblem;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree;
 import org.eclipse.cdt.core.dom.ast.IMacroBinding;
+import org.eclipse.cdt.core.parser.IToken;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNodeSpecification;
 import org.eclipse.cdt.internal.core.parser.scanner.Lexer.LexerOptions;
 
@@ -136,6 +137,7 @@ public interface ILocationResolver {
 	 * @see IASTNode#getRawSignature()
 	 */
 	char[] getUnpreprocessedSignature(IASTFileLocation loc);
+	IToken getUnpreprocessedToken(IASTFileLocation loc, int offset);
 	
 	/**
 	 * Searches for a preprocessor node matching the given specification. Candidates are passed to 

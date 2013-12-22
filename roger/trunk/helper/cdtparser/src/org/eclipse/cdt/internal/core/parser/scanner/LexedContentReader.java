@@ -1,5 +1,6 @@
 package org.eclipse.cdt.internal.core.parser.scanner;
 
+import java.nio.CharBuffer;
 import java.util.Collections;
 import java.util.Map;
 
@@ -86,10 +87,23 @@ public class LexedContentReader implements IScanner {
 			
 			@Override
 			public char[] getUnpreprocessedSignature(IASTFileLocation loc) {
-				if (loc.getNodeLength() != 1) {
-					throw new RuntimeException("Length must be 1");
+				if (loc.getNodeLength() == 1) {
+					return tokens[loc.getNodeOffset()].getCharImage();
+				} else {
+					StringBuilder builder = new StringBuilder();
+					for (int i = 0; i < loc.getNodeLength(); i++) {
+						if (i != 0) {
+							builder.append(' ');
+						}
+						builder.append(tokens[loc.getNodeOffset() + i].getCharImage());
+					}
+					return builder.toString().toCharArray();
 				}
-				return tokens[loc.getNodeOffset()].getCharImage();
+			}
+			
+			@Override
+			public IToken getUnpreprocessedToken(IASTFileLocation loc, int offset) {
+				return tokens[loc.getNodeOffset() + offset];
 			}
 			
 			@Override
