@@ -633,6 +633,8 @@ void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
   if (!Policy.SuppressInitializers && Init) {
     if (D->getInClassInitStyle() == ICIS_ListInit)
       Out << " ";
+    else if (D->getInClassInitStyle() == ICIS_DirectRogerInit)
+      Out << " =roger= ";
     else
       Out << " = ";
     Init->printPretty(Out, 0, Policy, Indentation);

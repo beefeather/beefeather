@@ -3492,6 +3492,8 @@ static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
     // functions.
     CXXRecordDecl *T2RecordDecl = cast<CXXRecordDecl>(T2RecordType->getDecl());
 
+    S.MaterializeRogerConversionOperators(T2RecordDecl);
+
     std::pair<CXXRecordDecl::conversion_iterator,
               CXXRecordDecl::conversion_iterator>
       Conversions = T2RecordDecl->getVisibleConversionFunctions();
@@ -4118,9 +4120,11 @@ static void TryUserDefinedConversion(Sema &S,
 
     // We can only enumerate the conversion functions for a complete type; if
     // the type isn't complete, simply skip this step.
-    if (!S.RequireCompleteType(DeclLoc, SourceType, 0)) {
+    if (!S.RequireCompleteType(DeclLoc, SourceType, 0, Sema::RRCR_NESTED)) {
       CXXRecordDecl *SourceRecordDecl
         = cast<CXXRecordDecl>(SourceRecordType->getDecl());
+
+      S.MaterializeRogerConversionOperators(SourceRecordDecl);
 
       std::pair<CXXRecordDecl::conversion_iterator,
                 CXXRecordDecl::conversion_iterator>

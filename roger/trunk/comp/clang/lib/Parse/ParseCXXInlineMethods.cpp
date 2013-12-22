@@ -65,7 +65,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
     }
   }
 
-  HandleMemberFunctionDeclDelays(D, FnD);
+  HandleMemberFunctionDeclDelays(D, FnD, false);
 
   D.complete(FnD);
 
@@ -195,9 +195,9 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
 /// specified Declarator is a well formed C++ non-static data member
 /// declaration. Now lex its initializer and store its tokens for parsing
 /// after the class is complete.
-void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
-  assert((Tok.is(tok::l_brace) || Tok.is(tok::equal)) &&
-         "Current token not a '{' or '='!");
+void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic) {
+  assert((Tok.is(tok::l_brace) || Tok.is(tok::l_paren) || Tok.is(tok::equal)) &&
+         "Current token not a '{' or '=' or '('!");
 
   LateParsedMemberInitializer *MI =
     new LateParsedMemberInitializer(this, VarD);
@@ -210,7 +210,14 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
     ConsumeToken();
   }
 
-  if (kind == tok::l_brace) {
+  if (kind == tok::l_paren) {
+    // Begin by storing the '(' token.
+    Toks.push_back(Tok);
+    ConsumeParen();
+
+    // Consume everything up to (and including) the matching right paren.
+    ConsumeAndStoreUntil(tok::r_paren, Toks, /*StopAtSemi=*/true);
+  } else if (kind == tok::l_brace) {
     // Begin by storing the '{' token.
     Toks.push_back(Tok);
     ConsumeBrace();
@@ -234,6 +241,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
 Parser::LateParsedDeclaration::~LateParsedDeclaration() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDeclarations() {}
 void Parser::LateParsedDeclaration::ParseLexedMemberInitializers() {}
+void Parser::LateParsedDeclaration::ParseRogerLexedStaticInitializers() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDefs() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
@@ -500,6 +508,13 @@ void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
                                                 Class.TagOrTemplate);
 
   if (!Class.LateParsedDeclarations.empty()) {
+    // There might be correct order needed!
+
+    // Before 'this' is introduced.
+    for (size_t i = 0; i < Class.LateParsedDeclarations.size(); ++i) {
+      Class.LateParsedDeclarations[i]->ParseRogerLexedStaticInitializers();
+    }
+
     // C++11 [expr.prim.general]p4:
     //   Otherwise, if a member-declarator declares a non-static data member 
     //  (9.2) of a class X, the expression this is a prvalue of type "pointer

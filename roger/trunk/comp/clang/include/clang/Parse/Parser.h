@@ -54,7 +54,10 @@ namespace clang {
   struct RogerDeclaration;
 
   class RogerParseScope;
+  class RogerRecordParseScope;
+  class RogerNamespaceParseScope;
   class RogerNestedTokensState;
+  struct RogerTopLevelDecls;
 
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
@@ -797,6 +800,7 @@ private:
 
     virtual void ParseLexedMethodDeclarations();
     virtual void ParseLexedMemberInitializers();
+    virtual void ParseRogerLexedStaticInitializers();
     virtual void ParseLexedMethodDefs();
     virtual void ParseLexedAttributes();
   };
@@ -977,10 +981,23 @@ private:
     LateParsedDeclarationsContainer LateParsedDeclarations;
   };
 
+  struct RogerParsingNamespace {
+    /// LateParsedDeclarations - Method declarations, inline definitions and
+    /// nested classes that contain pieces whose parsing will be delayed until
+    /// the top-level class is fully defined.
+    LateParsedDeclarationsContainer LateParsedDeclarations;
+  };
+
+
+
+
+
   /// \brief The stack of classes that is currently being
   /// parsed. Nested and local classes will be pushed onto this stack
   /// when they are parsed, and removed afterward.
   std::stack<ParsingClass *> ClassStack;
+
+  std::stack<RogerParsingNamespace *> RogerNamespaceStack;
 
   ParsingClass &getCurrentClass() {
     assert(!ClassStack.empty() && "No lexed method stacks!");
@@ -1001,15 +1018,15 @@ private:
     }
 
     /// \brief Pop this class of the stack.
-    void Pop() {
+    void Pop(ParsingClass **RogerParsingClass) {
       assert(!Popped && "Nested class has already been popped");
       Popped = true;
-      P.PopParsingClass(State);
+      P.PopParsingClass(State, RogerParsingClass);
     }
 
     ~ParsingClassDefinition() {
       if (!Popped)
-        P.PopParsingClass(State);
+        P.PopParsingClass(State, 0);
     }
   };
 
@@ -1070,8 +1087,11 @@ private:
 
   Sema::ParsingClassState
   PushParsingClass(Decl *TagOrTemplate, bool TopLevelClass, bool IsInterface);
+  Sema::ParsingClassState
+  PushParsingClassRoger(ParsingClass *parsingClass);
+
   void DeallocateParsedClasses(ParsingClass *Class);
-  void PopParsingClass(Sema::ParsingClassState);
+  void PopParsingClass(Sema::ParsingClassState, ParsingClass **RogerParsingClass);
 
   enum CachedInitKind {
     CIK_DefaultArgument,
@@ -1085,7 +1105,7 @@ private:
                                 const VirtSpecifiers& VS,
                                 FunctionDefinitionKind DefinitionKind,
                                 ExprResult& Init);
-  void ParseCXXNonStaticMemberInitializer(Decl *VarD);
+  void ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic);
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
                                bool EnterScope, bool OnDefinition);
@@ -2129,7 +2149,7 @@ private:
                                    SourceLocation AttrFixitLoc,
                                    ParsedAttributesWithRange &Attrs,
                                    unsigned TagType,
-                                   Decl *TagDecl, bool RogerMode = false);
+                                   Decl *TagDecl, bool RogerMode = false, ParsingClass **RogerParsingClass = 0);
   ExprResult ParseCXXMemberInitializer(Decl *D, bool IsFunction,
                                        SourceLocation &EqualLoc);
   void ParseCXXClassMemberDeclaration(AccessSpecifier AS, AttributeList *Attr,
@@ -2138,7 +2158,7 @@ private:
   void ParseConstructorInitializer(Decl *ConstructorDecl);
   MemInitResult ParseMemInitializer(Decl *ConstructorDecl);
   void HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
-                                      Decl *ThisDecl);
+                                      Decl *ThisDecl, bool isNamespaceForRoger);
 
   //===--------------------------------------------------------------------===//
   // C++ 10: Derived classes [class.derived]
@@ -2298,17 +2318,28 @@ private:
 private:
   bool InRogerMode;
 
-  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerDeclList, DeclContext *DC);
+  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerTopLevelDecls *topLevelDecs);
+  void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, ParsingClass *parsingClass);
+  template<typename Types>
+  void FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs);
   void ParseRogerNonTypeRegion(RogerNonType *nonType, int defaultVisibility, DeclContext *DC);
-  void ParseRogerClassDecl(RogerClassDecl *classDecl, int defaultVisibility);
+  DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC);
+  Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
+      const ParsedTemplateInfo &TemplateInfo,
+      AccessSpecifier AS, RogerNestedTokensState &parseState);
 
 public:
-  void ParseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd);
-  void ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, int defaultVisibility, DeclContext *DC);
+  void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, int tokenOffset);
+  DeclGroupPtrTy ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, DeclContext *DC, RogerParsingNamespace *parsingNs);
+  DeclGroupPtrTy ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, ParsingClass *parsingClass);
+  void RogerCompleteCXXMemberSpecificationParsing(RecordDecl *recDecl, ParsingClass *parsingClass);
+  void RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs);
 
-  void ParseRogerPartOpt();
+  void ParseRogerPartOpt(ASTConsumer *Consumer);
 
   friend class clang::RogerParseScope;
+  friend class clang::RogerRecordParseScope;
+  friend class clang::RogerNamespaceParseScope;
   friend class clang::RogerNestedTokensState;
 };
 

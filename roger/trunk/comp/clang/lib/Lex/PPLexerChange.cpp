@@ -212,6 +212,7 @@ struct Preprocessor::RogerStreamState {
   BacktrackPositionsTy BacktrackPositions;
   std::vector<IncludeStackInfo>::size_type IncludeMacroStackSize;
   Token sentinelTok;
+  TokenLexer *mainTokenLexer;
   TokenLexer *sentinelTokenLexer;
 };
 
@@ -228,10 +229,15 @@ Preprocessor::RogerStreamState *Preprocessor::EnterRogerTokenStream(const Token 
   EnterTokenStream(&state->sentinelTok, 1, true, false);
   state->sentinelTokenLexer = CurTokenLexer.get();
   EnterTokenStream(Toks, NumToks, true, false);
+  state->mainTokenLexer = CurTokenLexer.get();
 
   state->IncludeMacroStackSize = IncludeMacroStack.size();
   RogerStreamStates.push_back(state);
   return state;
+}
+
+unsigned Preprocessor::GetRogerTokenStreamPosition(RogerStreamState *state) {
+  return state->mainTokenLexer->getCurTokenPos();
 }
 
 void Preprocessor::ExitRogerTokenStream(RogerStreamState *state) {

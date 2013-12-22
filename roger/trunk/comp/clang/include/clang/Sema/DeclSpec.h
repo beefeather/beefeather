@@ -1757,7 +1757,7 @@ public:
 
   /// mayBeFollowedByCXXDirectInit - Return true if the declarator can be
   /// followed by a C++ direct initializer, e.g. "int x(1);".
-  bool mayBeFollowedByCXXDirectInit() const {
+  bool mayBeFollowedByCXXDirectInit(bool InRogerMode) const {
     if (hasGroupingParens()) return false;
 
     if (getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef)
@@ -1783,8 +1783,10 @@ public:
       // parse in order to produce the right diagnostic.
       return true;
 
-    case KNRTypeListContext:
     case MemberContext:
+      return InRogerMode && getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static;
+
+    case KNRTypeListContext:
     case PrototypeContext:
     case LambdaExprParameterContext:
     case ObjCParameterContext:

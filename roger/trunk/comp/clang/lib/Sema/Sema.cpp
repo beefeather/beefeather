@@ -1388,3 +1388,5 @@ CapturedRegionScopeInfo *Sema::getCurCapturedRegion() {
 
   return dyn_cast<CapturedRegionScopeInfo>(FunctionScopes.back());
 }
+
+int Sema::RogerLogScope::indent = 0;

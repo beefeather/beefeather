@@ -2111,6 +2111,7 @@ public:
 
   // Roger.
 public:
+  // Remove this.
   bool RogerPlannedForLateParsing;
 };
 
@@ -2496,6 +2497,7 @@ private:
 protected:
   /// IsBeingDefined - True if this is currently being defined.
   bool IsBeingDefined : 1;
+  bool IsBeingDefinedRoger : 1;
 
 private:
   /// IsEmbeddedInDeclarator - True if this tag declaration is
@@ -2560,7 +2562,7 @@ protected:
   TagDecl(Kind DK, TagKind TK, DeclContext *DC, SourceLocation L,
           IdentifierInfo *Id, TagDecl *PrevDecl, SourceLocation StartL)
       : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK), TagDeclKind(TK),
-        IsCompleteDefinition(false), IsBeingDefined(false),
+        IsCompleteDefinition(false), IsBeingDefined(false), IsBeingDefinedRoger(false),
         IsEmbeddedInDeclarator(false), IsFreeStanding(false),
         IsCompleteDefinitionRequired(false),
         NamedDeclOrQualifier((NamedDecl *)0) {
@@ -2584,6 +2586,9 @@ protected:
   void completeDefinition();
 
 public:
+  void pauseDefinitionRoger();
+  void resumeDefinitionRoger();
+
   typedef redeclarable_base::redecl_iterator redecl_iterator;
   using redeclarable_base::redecls_begin;
   using redeclarable_base::redecls_end;
@@ -2628,6 +2633,10 @@ public:
   /// isBeingDefined - Return true if this decl is currently being defined.
   bool isBeingDefined() const {
     return IsBeingDefined;
+  }
+
+  bool isBeingDefinedRoger() const {
+    return IsBeingDefinedRoger;
   }
 
   bool isEmbeddedInDeclarator() const {
@@ -3128,7 +3137,12 @@ public:
   /// commandline option.
   bool isMsStruct(const ASTContext &C) const;
 
-  RogerItemizedLateParseCallback* rogerCompleteTypeCallback;
+  RogerItemizedLateParseCallback* rogerPreparseTypeCallback;
+
+  std::vector<FieldDecl*> *rogerCollectedFields;
+  llvm::ilist<UnparsedNamedDecl> rogerConstructorDecls;
+  llvm::ilist<UnparsedNamedDecl> rogerDestructorDecls;
+  llvm::ilist<UnparsedNamedDecl> rogerConversionDecls;
 
 private:
   /// \brief Deserialize just the fields.

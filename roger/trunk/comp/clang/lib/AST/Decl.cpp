@@ -3113,6 +3113,7 @@ unsigned FieldDecl::getFieldIndex() const {
   if (Canonical != this)
     return Canonical->getFieldIndex();
 
+  assert(getParent()->isCompleteDefinition() && "Roger assert");
   if (CachedFieldIndex) return CachedFieldIndex - 1;
 
   unsigned Index = 0;
@@ -3186,9 +3187,19 @@ void TagDecl::completeDefinition() {
 
   IsCompleteDefinition = true;
   IsBeingDefined = false;
+  IsBeingDefinedRoger = false;
 
   if (ASTMutationListener *L = getASTMutationListener())
     L->CompletedTagDefinition(this);
+}
+void TagDecl::pauseDefinitionRoger() {
+  IsBeingDefined = false;
+  IsBeingDefinedRoger = true;
+}
+
+void TagDecl::resumeDefinitionRoger() {
+  IsBeingDefinedRoger = false;
+  IsBeingDefined = true;
 }
 
 TagDecl *TagDecl::getDefinition() const {
@@ -3325,7 +3336,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, DeclContext *DC,
                        SourceLocation StartLoc, SourceLocation IdLoc,
                        IdentifierInfo *Id, RecordDecl *PrevDecl)
   : TagDecl(DK, TK, DC, IdLoc, Id, PrevDecl, StartLoc)
-  , rogerCompleteTypeCallback(0) {
+  , rogerPreparseTypeCallback(0), rogerCollectedFields(0) {
   HasFlexibleArrayMember = false;
   AnonymousStructOrUnion = false;
   HasObjectMember = false;

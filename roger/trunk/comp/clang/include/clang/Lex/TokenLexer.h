@@ -142,6 +142,10 @@ public:
   /// preprocessor directive.
   bool isParsingPreprocessorDirective() const;
 
+  unsigned getCurTokenPos() const {
+    return CurToken;
+  }
+
 private:
   void destroy();
 

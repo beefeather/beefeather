@@ -690,7 +690,7 @@ public:
 
   RogerStreamState *EnterRogerTokenStream(const Token *Toks, unsigned NumToks,
                                           bool OwnsTokens);
-
+  unsigned GetRogerTokenStreamPosition(RogerStreamState *state);
   void ExitRogerTokenStream(RogerStreamState *state);
 
 

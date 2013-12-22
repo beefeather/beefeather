@@ -4827,7 +4827,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // In such a case, check if we actually have a function declarator; if it
       // is not, the declarator has been fully parsed.
       bool IsAmbiguous = false;
-      if (getLangOpts().CPlusPlus && D.mayBeFollowedByCXXDirectInit()) {
+      if (getLangOpts().CPlusPlus && D.mayBeFollowedByCXXDirectInit(Actions.IsInRogerMode())) {
         // The name of the declarator, if any, is tentatively declared within
         // a possible direct initializer.
         TentativelyDeclaredIdentifiers.push_back(D.getIdentifier());
@@ -5333,7 +5333,7 @@ void Parser::ParseParameterDeclarationClause(
         SourceLocation EqualLoc = Tok.getLocation();
 
         // Parse the default argument
-        if (D.getContext() == Declarator::MemberContext) {
+        if (D.getContext() == Declarator::MemberContext || Actions.RogerOnDemandParser) {
           // If we're inside a class definition, cache the tokens
           // corresponding to the default argument. We'll actually parse
           // them when we see the end of the class definition.

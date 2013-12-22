@@ -207,7 +207,7 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
-                          SS.getRange())) {
+                          SS.getRange(), RRCR_NESTED)) {
     SS.SetInvalid(SS.getRange());
     return true;
   }

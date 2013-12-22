@@ -803,6 +803,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         // member. If IsStandardLayout remains true, then the first non-static
         // data member must come through here with Empty still true, and Empty
         // will subsequently be set to false below.
+
+        // This doesn't work for Roger.
         if (data().IsStandardLayout && data().Empty) {
           for (CXXRecordDecl::base_class_const_iterator BI = bases_begin(),
                                                         BE = bases_end();

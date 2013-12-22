@@ -83,6 +83,7 @@ namespace clang {
   public:
     virtual ~RogerItemizedLateParseCallback() {}
     virtual void parseDeferred() = 0;
+    virtual bool isBusy() = 0;
   };
 
 
@@ -1054,7 +1055,7 @@ protected:
       : DeclKind(K), ExternalLexicalStorage(false),
         ExternalVisibleStorage(false),
         NeedToReconcileExternalVisibleStorage(false), LookupPtr(0, false),
-        FirstDecl(0), LastDecl(0), RogerNameFillCallback(0) {}
+        FirstDecl(0), LastDecl(0), RogerNameFillCallback(0), RogerCompleteParsingCallback(0) {}
 
 public:
   ~DeclContext();
@@ -1641,9 +1642,10 @@ private:
 public:
 
   RogerItemizedLateParseCallback *RogerNameFillCallback;
+  RogerItemizedLateParseCallback *RogerCompleteParsingCallback;
 
   struct UnparsedNamedDecl : public llvm::ilist_node<UnparsedNamedDecl> {
-    IdentifierInfo *name;
+    DeclarationName name;
     RogerItemizedLateParseCallback *callback;
     bool beingCompiled;
     UnparsedNamedDecl() : beingCompiled(false) {}

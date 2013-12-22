@@ -1517,6 +1517,7 @@ bool Sema::IsDerivedFrom(QualType Derived, QualType Base) {
   if (BaseRD->isInvalidDecl() || DerivedRD->isInvalidDecl())
     return false;
 
+  RogerDefineRecord(DerivedRD);
   // FIXME: instantiate DerivedRD if necessary.  We need a PoI for this.
   return DerivedRD->hasDefinition() && DerivedRD->isDerivedFrom(BaseRD);
 }
@@ -2285,7 +2286,9 @@ Sema::ActOnCXXInClassMemberInitializer(Decl *D, SourceLocation InitLoc,
     InitializedEntity Entity = InitializedEntity::InitializeMember(FD);
     InitializationKind Kind = FD->getInClassInitStyle() == ICIS_ListInit
         ? InitializationKind::CreateDirectList(InitExpr->getLocStart())
-        : InitializationKind::CreateCopy(InitExpr->getLocStart(), InitLoc);
+        : (FD->getInClassInitStyle() == ICIS_CopyInit
+            ? InitializationKind::CreateCopy(InitExpr->getLocStart(), InitLoc)
+            : InitializationKind::CreateDirect(InitLoc, InitExpr->getLocStart(), /* roger hack */ InitExpr->getLocStart()));
     InitializationSequence Seq(*this, Entity, Kind, InitExpr);
     Init = Seq.Perform(*this, Entity, Kind, InitExpr);
     if (Init.isInvalid()) {
@@ -12113,7 +12116,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
     if (!RT->isBeingDefined() &&
         RequireCompleteType(New->getLocation(), NewClassTy, 
                             diag::err_covariant_return_incomplete,
-                            New->getDeclName()))
+                            New->getDeclName(), true))
     return true;
   }
 

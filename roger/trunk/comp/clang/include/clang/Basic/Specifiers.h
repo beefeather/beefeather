@@ -202,7 +202,8 @@ namespace clang {
   enum InClassInitStyle {
     ICIS_NoInit,   ///< No in-class initializer.
     ICIS_CopyInit, ///< Copy initialization.
-    ICIS_ListInit  ///< Direct list-initialization.
+    ICIS_ListInit,  ///< Direct list-initialization.
+    ICIS_DirectRogerInit  ///< Roger direct init syntax.
   };
 
   /// \brief CallingConv - Specifies the calling convention that a function uses.

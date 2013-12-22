@@ -1777,7 +1777,7 @@ AccessSpecifier Parser::getAccessSpecifierIfPresent() const {
 /// delayed, e.g., default arguments, create a late-parsed method declaration
 /// record to handle the parsing at the end of the class definition.
 void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
-                                            Decl *ThisDecl) {
+                                            Decl *ThisDecl, bool isNamespaceForRoger) {
   // We just declared a member function. If this member function
   // has any default arguments, we'll need to parse them later.
   LateParsedMethodDeclaration *LateMethod = 0;
@@ -1790,7 +1790,11 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
         // Push this method onto the stack of late-parsed method
         // declarations.
         LateMethod = new LateParsedMethodDeclaration(this, ThisDecl);
-        getCurrentClass().LateParsedDeclarations.push_back(LateMethod);
+        LateParsedDeclarationsContainer &LateParsedDeclarations =
+            isNamespaceForRoger
+            ? RogerNamespaceStack.top()->LateParsedDeclarations
+            : getCurrentClass().LateParsedDeclarations;
+        LateParsedDeclarations.push_back(LateMethod);
         LateMethod->TemplateScope = getCurScope()->isTemplateParamScope();
 
         // Add all of the parameters prior to this one (they don't
@@ -2227,7 +2231,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     ParseOptionalCXX11VirtSpecifierSeq(VS, getCurrentClass().IsInterface);
 
     InClassInitStyle HasInClassInit = ICIS_NoInit;
-    if ((Tok.is(tok::equal) || Tok.is(tok::l_brace)) && !HasInitializer) {
+    if ((Tok.is(tok::equal) || Tok.is(tok::l_brace) || Tok.is(tok::l_paren)) && !HasInitializer) {
       if (BitfieldSize.get()) {
         Diag(Tok, diag::err_bitfield_member_init);
         SkipUntil(tok::comma, true, true);
@@ -2236,7 +2240,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         if (!DeclaratorInfo.isDeclarationOfFunction() &&
             DeclaratorInfo.getDeclSpec().getStorageClassSpec()
               != DeclSpec::SCS_typedef)
-          HasInClassInit = Tok.is(tok::equal) ? ICIS_CopyInit : ICIS_ListInit;
+          HasInClassInit = Tok.is(tok::equal) ? ICIS_CopyInit : (Tok.is(tok::l_paren) ? ICIS_DirectRogerInit : ICIS_ListInit);
       }
     }
 
@@ -2283,12 +2287,14 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
 
     // Handle the initializer.
     if (HasInClassInit != ICIS_NoInit &&
-        DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
-        DeclSpec::SCS_static) {
+        (DeclaratorInfo.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static
+            || Actions.IsInRogerMode())) {
       // The initializer was deferred; parse it and cache the tokens.
-      Diag(Tok, getLangOpts().CPlusPlus11
-                    ? diag::warn_cxx98_compat_nonstatic_member_init
-                    : diag::ext_nonstatic_member_init);
+      if (!Actions.IsInRogerMode()) {
+        Diag(Tok, getLangOpts().CPlusPlus11
+                      ? diag::warn_cxx98_compat_nonstatic_member_init
+                      : diag::ext_nonstatic_member_init);
+      }
 
       if (DeclaratorInfo.isArrayOfUnknownBound()) {
         // C++11 [dcl.array]p3: An array bound may also be omitted when the
@@ -2303,7 +2309,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         if (ThisDecl)
           ThisDecl->setInvalidDecl();
       } else
-        ParseCXXNonStaticMemberInitializer(ThisDecl);
+        ParseCXXNonStaticOrRogerMemberInitializer(ThisDecl, DeclaratorInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static);
     } else if (HasInitializer) {
       // Normal initializer.
       if (!Init.isUsable())
@@ -2334,7 +2340,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       if (DeclaratorInfo.isFunctionDeclarator() &&
           DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
               DeclSpec::SCS_typedef)
-        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
+        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl, false);
     }
     LateParsedAttrs.clear();
 
@@ -2456,7 +2462,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
 void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          SourceLocation AttrFixitLoc,
                                          ParsedAttributesWithRange &Attrs,
-                                         unsigned TagType, Decl *TagDecl, bool RogerMode) {
+                                         unsigned TagType, Decl *TagDecl, bool RogerMode, ParsingClass **RogerParsingClass) {
   assert((TagType == DeclSpec::TST_struct ||
          TagType == DeclSpec::TST_interface ||
          TagType == DeclSpec::TST_union  ||
@@ -2546,7 +2552,15 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   assert(Tok.is(tok::l_brace));
 
 
-  if (!RogerMode) {
+  if (RogerMode) {
+    if (TagDecl) {
+      // Quick hack.
+      SourceLocation OpenLocation;
+      Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
+          OpenLocation);
+      Actions.ActOnTagPauseDefinitionRoger(TagDecl);
+    }
+  } else {
   // } anti-diff
 
   BalancedDelimiterTracker T(*this, tok::l_brace);
@@ -2695,7 +2709,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
 
 
   // Leave the class scope.
-  ParsingDef.Pop();
+  ParsingDef.Pop(RogerParsingClass);
   ClassScope.Exit();
 }
 
@@ -3035,6 +3049,12 @@ Parser::PushParsingClass(Decl *ClassDecl, bool NonNestedClass,
   return Actions.PushParsingClass();
 }
 
+Sema::ParsingClassState
+Parser::PushParsingClassRoger(ParsingClass *parsingClass) {
+  ClassStack.push(parsingClass);
+  return Actions.PushParsingClass();
+}
+
 /// \brief Deallocate the given parsed class and all of its nested
 /// classes.
 void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
@@ -3049,13 +3069,19 @@ void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
 /// This routine should be called when we have finished parsing the
 /// definition of a class, but have not yet popped the Scope
 /// associated with the class's definition.
-void Parser::PopParsingClass(Sema::ParsingClassState state) {
+void Parser::PopParsingClass(Sema::ParsingClassState state, ParsingClass **RogerParsingClass) {
   assert(!ClassStack.empty() && "Mismatched push/pop for class parsing");
 
   Actions.PopParsingClass(state);
 
   ParsingClass *Victim = ClassStack.top();
   ClassStack.pop();
+
+  if (RogerParsingClass) {
+    *RogerParsingClass = Victim;
+    return;
+  }
+
   if (Victim->TopLevelClass) {
     // Deallocate all of the nested classes of this class,
     // recursively: we don't need to keep any of this information.

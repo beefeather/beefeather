@@ -1024,9 +1024,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       else
         FnD = cast<FunctionDecl>(DP);
 
+      HandleMemberFunctionDeclDelays(D, FnD, true);
+
       Actions.CheckForFunctionRedefinition(FnD);
-      Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
-      FnD->RogerPlannedForLateParsing = !skipBecauseTemplate;
+      if (skipBecauseTemplate) {
+        Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
+      } else {
+        LexedMethod* LM = new LexedMethod(this, FnD);
+        RogerNamespaceStack.top()->LateParsedDeclarations.push_back(LM);
+        LM->TemplateScope = false;
+        LM->Toks.swap(Toks);
+      }
+      //FnD->RogerPlannedForLateParsing = !skipBecauseTemplate;
     }
     return DP;
   }

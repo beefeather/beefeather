@@ -5088,13 +5088,16 @@ bool Sema::RequireCompleteExprType(Expr *E, unsigned DiagID) {
 /// @returns @c true if @p T is incomplete and a diagnostic was emitted,
 /// @c false otherwise.
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
-                               TypeDiagnoser &Diagnoser) {
-  if (RequireCompleteTypeImpl(Loc, T, Diagnoser))
+                               TypeDiagnoser &Diagnoser, RogerRequireCompleteReason RogerOnlyInheritance) {
+  bool rogerEnough = false;
+  if (RequireCompleteTypeImpl(Loc, T, Diagnoser, RogerOnlyInheritance, &rogerEnough))
     return true;
-  if (const TagType *Tag = T->getAs<TagType>()) {
-    if (!Tag->getDecl()->isCompleteDefinitionRequired()) {
-      Tag->getDecl()->setCompleteDefinitionRequired();
-      Consumer.HandleTagDeclRequiredDefinition(Tag->getDecl());
+  if (!rogerEnough) {
+    if (const TagType *Tag = T->getAs<TagType>()) {
+      if (!Tag->getDecl()->isCompleteDefinitionRequired()) {
+        Tag->getDecl()->setCompleteDefinitionRequired();
+        Consumer.HandleTagDeclRequiredDefinition(Tag->getDecl());
+      }
     }
   }
   return false;
@@ -5102,7 +5105,8 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
 
 /// \brief The implementation of RequireCompleteType
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
-                                   TypeDiagnoser &Diagnoser) {
+                                   TypeDiagnoser &Diagnoser,
+                                   RogerRequireCompleteReason RogerOnlyInheritance, bool *rogerEnough) {
   // FIXME: Add this assertion to make sure we always get instantiation points.
   //  assert(!Loc.isInvalid() && "Invalid location in RequireCompleteType");
   // FIXME: Add this assertion to help us flush out problems with
@@ -5112,8 +5116,16 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   // If we have a complete type, we're done.
+
+
+  bool rogerEnoughValue;
+  if (!rogerEnough) {
+    rogerEnough = &rogerEnoughValue;
+  }
+  *rogerEnough = RequireCompleteTypeRoger(T, RogerOnlyInheritance);
+
   NamedDecl *Def = 0;
-  if (!T->isIncompleteType(&Def, true)) {
+  if (!T->isIncompleteType(&Def) || *rogerEnough) {
     // If we know about the definition but it is not visible, complain.
     if (!Diagnoser.Suppressed && Def && !LookupResult::isVisible(*this, Def)) {
       // Suppress this error outside of a SFINAE context if we've already
@@ -5234,9 +5246,9 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 }
 
 bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
-                               unsigned DiagID) {
+                               unsigned DiagID, RogerRequireCompleteReason RogerOnlyInheritance) {
   TypeDiagnoserDiag Diagnoser(DiagID);
-  return RequireCompleteType(Loc, T, Diagnoser);
+  return RequireCompleteType(Loc, T, Diagnoser, RogerOnlyInheritance);
 }
 
 /// \brief Get diagnostic %select index for tag kind for

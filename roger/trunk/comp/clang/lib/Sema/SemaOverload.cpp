@@ -2103,7 +2103,7 @@ bool Sema::IsPointerConversion(Expr *From, QualType FromType, QualType ToType,
   if (getLangOpts().CPlusPlus &&
       FromPointeeType->isRecordType() && ToPointeeType->isRecordType() &&
       !Context.hasSameUnqualifiedType(FromPointeeType, ToPointeeType) &&
-      !RequireCompleteType(From->getLocStart(), FromPointeeType, 0) &&
+      !RequireCompleteType(From->getLocStart(), FromPointeeType, 0, /* only inheriance = */RRCR_INHERITANCE) &&
       IsDerivedFrom(FromPointeeType, ToPointeeType)) {
     ConvertedType = BuildSimilarlyQualifiedPointerType(FromTypePtr,
                                                        ToPointeeType,
@@ -3093,6 +3093,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                                    = From->getType()->getAs<RecordType>()) {
     if (CXXRecordDecl *FromRecordDecl
          = dyn_cast<CXXRecordDecl>(FromRecordType->getDecl())) {
+
+      S.MaterializeRogerConversionOperators(FromRecordDecl);
+
       // Add all of the conversion functions as candidates.
       std::pair<CXXRecordDecl::conversion_iterator,
                 CXXRecordDecl::conversion_iterator>
@@ -3999,6 +4002,8 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
   assert(T2->isRecordType() && "Can only find conversions of record types.");
   CXXRecordDecl *T2RecordDecl
     = dyn_cast<CXXRecordDecl>(T2->getAs<RecordType>()->getDecl());
+
+  S.MaterializeRogerConversionOperators(T2RecordDecl);
 
   OverloadCandidateSet CandidateSet(DeclLoc);
   std::pair<CXXRecordDecl::conversion_iterator,
@@ -6493,6 +6498,7 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
       return;
 
     CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
+    SemaRef.MaterializeRogerConversionOperators(ClassDecl);
     std::pair<CXXRecordDecl::conversion_iterator,
               CXXRecordDecl::conversion_iterator>
       Conversions = ClassDecl->getVisibleConversionFunctions();

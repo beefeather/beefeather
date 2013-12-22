@@ -226,6 +226,11 @@ class Sema {
   }
 
 public:
+
+  enum RogerRequireCompleteReason {
+    RRCR_UNKNOWN, RRCR_FULL = RRCR_UNKNOWN, RRCR_INHERITANCE, RRCR_NESTED
+  };
+
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
   typedef OpaquePtr<QualType> TypeTy;
@@ -408,9 +413,37 @@ public:
   protected:
     ~RogerOnDemandParserInt() {}
   };
+
+  class RogerLogScope {
+    const char *myText;
+    static int indent;
+    void printIndent() {
+      for (int i = 0; i < indent; i++) {
+        llvm::outs() << "  ";
+      }
+    }
+
+  public:
+    RogerLogScope(const char *text) : myText(text) {
+      printIndent();
+      llvm::outs() << ">> " << myText << "\n";
+      ++indent;
+    }
+    ~RogerLogScope() {
+      --indent;
+      printIndent();
+      llvm::outs() << "<< (" << myText << ")\n";
+    }
+  };
+
+
+
+
+
   RogerOnDemandParserInt* RogerOnDemandParser;
   void ActOnRogerModeStart(RogerOnDemandParserInt* RogerOnDemandParser);
   void ActOnRogerModeFinish();
+  bool IsInRogerMode();
 
   class DelayedDiagnostics;
 
@@ -1203,18 +1236,19 @@ public:
 
 private:
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
-                           TypeDiagnoser &Diagnoser);
+                           TypeDiagnoser &Diagnoser, RogerRequireCompleteReason RogerOnlyInheritance = RRCR_UNKNOWN,
+                           bool *rogerEnough = 0);
 public:
   bool RequireCompleteType(SourceLocation Loc, QualType T,
-                           TypeDiagnoser &Diagnoser);
+                           TypeDiagnoser &Diagnoser, RogerRequireCompleteReason RogerOnlyInheritance = RRCR_UNKNOWN);
   bool RequireCompleteType(SourceLocation Loc, QualType T,
-                           unsigned DiagID);
+                           unsigned DiagID, RogerRequireCompleteReason RogerOnlyInheritance = RRCR_UNKNOWN);
 
   template<typename T1>
   bool RequireCompleteType(SourceLocation Loc, QualType T,
-                           unsigned DiagID, const T1 &Arg1) {
+                           unsigned DiagID, const T1 &Arg1, RogerRequireCompleteReason RogerOnlyInheritance = RRCR_UNKNOWN) {
     BoundTypeDiagnoser1<T1> Diagnoser(DiagID, Arg1);
-    return RequireCompleteType(Loc, T, Diagnoser);
+    return RequireCompleteType(Loc, T, Diagnoser, RogerOnlyInheritance);
   }
 
   template<typename T1, typename T2>
@@ -1740,6 +1774,8 @@ public:
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceLocation RBraceLoc);
+  void ActOnTagPauseDefinitionRoger(Decl *TagD);
+  void ActOnTagResumeDefinitionRoger(Scope *S, Decl *TagD);
 
   void ActOnObjCContainerFinishDefinition();
 
@@ -7510,10 +7546,18 @@ public:
                                    Expr *SubExpr);
 
   // Roger
-  void ActOnNamedDeclarationRoger(IdentifierInfo* Name, RogerItemizedLateParseCallback *callback);
+  void ActOnNamedDeclarationRoger(DeclarationName Name, RogerItemizedLateParseCallback *callback);
+  void ActOnConversionDeclarationRoger(RogerItemizedLateParseCallback *callback);
+  void ActOnConstructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
+  void ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
   void ActOnNamespaceFinishRoger(DeclContext* ns);
+  void CompleteDeclContextRoger(DeclContext* ns);
 
-  void MaterializeRogerNames(DeclarationName Name, DeclContext* dc);
+
+  void MaterializeRogerContructors(RecordDecl *Class);
+  void MaterializeRogerDestructors(RecordDecl *Class);
+  void MaterializeRogerConversionOperators(RecordDecl *Class);
+  void MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Redecl);
   void InstantiateFunctionDefinitionRoger(FunctionDecl *Function);
 
   NamespaceDecl *ActOnRogerNamespaceDef(Scope *NamespcScope,
@@ -7522,7 +7566,12 @@ public:
       RogerItemizedLateParseCallback *rogerCallback,
       AttributeList *AttrList);
 
+  void RogerDefineRecord(CXXRecordDecl *decl);
+  // Return true if roger thinks that enough has been done.
+  bool RequireCompleteTypeRoger(QualType T, RogerRequireCompleteReason RogerOnlyInheritance);
+  bool RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReason RogerOnlyInheritance);
 
+  void ActOnFinishCXXMemberSpecificationRoger(RecordDecl *TagDecl);
 
 
 

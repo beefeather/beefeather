@@ -661,7 +661,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC, DeclCo
   bool Found = false;
 
   if (mutableDC) {
-    S.MaterializeRogerNames(R.getLookupName(), mutableDC);
+    S.MaterializeRogerNames(R.getLookupName(), mutableDC, R.isForRedeclaration());
   }
 
   // Lazily declare C++ special member functions.
@@ -886,7 +886,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
         DeclareImplicitMemberFunctionsWithName(*this, Name, DC);
   }
 
-  MaterializeRogerNames(Name, S->getEntity());
+  MaterializeRogerNames(Name, S->getEntity(), R.isForRedeclaration());
 
 
   // Implicitly declare member functions with the name we're looking for, if in
@@ -1608,7 +1608,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   assert((!isa<TagDecl>(LookupCtx) ||
           LookupCtx->isDependentContext() ||
           cast<TagDecl>(LookupCtx)->isCompleteDefinition() ||
-          cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
+          cast<TagDecl>(LookupCtx)->isBeingDefined() || cast<TagDecl>(LookupCtx)->isBeingDefinedRoger()) &&
          "Declaration context must already be complete!");
 
   // Perform qualified name lookup into the LookupCtx.
@@ -2655,6 +2655,7 @@ DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
     if (getLangOpts().CPlusPlus11 && Class->needsImplicitMoveConstructor())
       DeclareImplicitMoveConstructor(Class);
   }
+  MaterializeRogerContructors(Class);
 
   CanQualType T = Context.getCanonicalType(Context.getTypeDeclType(Class));
   DeclarationName Name = Context.DeclarationNames.getCXXConstructorName(T);
@@ -2701,6 +2702,7 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
 ///
 /// \returns The destructor for this class.
 CXXDestructorDecl *Sema::LookupDestructor(CXXRecordDecl *Class) {
+  MaterializeRogerDestructors(Class);
   return cast<CXXDestructorDecl>(LookupSpecialMember(Class, CXXDestructor,
                                                      false, false, false,
                                                      false, false)->getMethod());
