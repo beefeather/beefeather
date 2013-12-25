@@ -14,7 +14,8 @@ package org.eclipse.cdt.core.index;
 
 import org.eclipse.cdt.core.dom.ast.IFileNomination;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPUsingDirective;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents a file that has been indexed.

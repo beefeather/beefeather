@@ -11,7 +11,8 @@
 package org.eclipse.cdt.core.index;
 
 import org.eclipse.cdt.core.dom.ast.IBinding;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents the semantics of a name in the index.

@@ -24,7 +24,8 @@ import org.eclipse.cdt.internal.core.index.IIndexFragment;
 import org.eclipse.cdt.internal.core.pdom.dom.cpp.PDOMCPPUnknownField;
 import org.eclipse.cdt.internal.core.pdom.dom.cpp.PDOMCPPUnknownMemberClass;
 import org.eclipse.cdt.internal.core.pdom.dom.cpp.PDOMCPPUnknownMethod;
-import org.eclipse.core.runtime.CoreException;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents a binding that is unknown because it depends on template arguments.

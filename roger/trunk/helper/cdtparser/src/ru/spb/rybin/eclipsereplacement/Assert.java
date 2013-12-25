@@ -8,10 +8,14 @@ public class Assert {
 		}
 	}
 
-	public static void isTrue(boolean b) {
+	public static void isTrue(boolean b, String message) {
 		if (!b) {
-		    throw new RuntimeException();
+		    throw new RuntimeException(message);
 		}
+	}
+
+	public static void isTrue(boolean b) {
+		isTrue(b, null);
 	}
 
 	public static boolean isLegal(boolean b, String message) {

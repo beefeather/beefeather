@@ -22,8 +22,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPClassType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateParameterMap;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeMarshalBuffer;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 /**
  * Base class for evaluations that are dependent, or that have been instantiated
