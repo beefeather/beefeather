@@ -191,18 +191,33 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
   return FnD;
 }
 
-/// ParseCXXNonStaticMemberInitializer - We parsed and verified that the
+/// ParseCXXNonStaticOrRogerMemberInitializer - We parsed and verified that the
 /// specified Declarator is a well formed C++ non-static data member
 /// declaration. Now lex its initializer and store its tokens for parsing
 /// after the class is complete.
-void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic) {
+void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic, bool isMember) {
   assert((Tok.is(tok::l_brace) || Tok.is(tok::l_paren) || Tok.is(tok::equal)) &&
          "Current token not a '{' or '=' or '('!");
 
-  LateParsedMemberInitializer *MI =
-    new LateParsedMemberInitializer(this, VarD);
-  getCurrentClass().LateParsedDeclarations.push_back(MI);
-  CachedTokens &Toks = MI->Toks;
+  CachedTokens *ToksPointer;
+  LateParsedDeclaration *lateDecl;
+  if (isStatic) {
+    // Correct?
+    VarDecl *VD = cast<VarDecl>(VarD);
+    LateParsedStaticVarInitializer *MI = new LateParsedStaticVarInitializer(this, VD);
+    ToksPointer = &MI->getToks();
+    lateDecl = MI;
+  } else {
+    LateParsedMemberInitializer *MI =
+      new LateParsedMemberInitializer(this, VarD);
+    ToksPointer = &MI->Toks;
+    lateDecl = MI;
+  }
+
+  LateParsedDeclarationsContainer &LateParsedDeclarations =
+      isMember ? getCurrentClass().LateParsedDeclarations : RogerNamespaceStack.top()->LateParsedDeclarations;
+  LateParsedDeclarations.push_back(lateDecl);
+  CachedTokens &Toks = *ToksPointer;
 
   tok::TokenKind kind = Tok.getKind();
   if (kind == tok::equal) {

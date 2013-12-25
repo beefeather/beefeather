@@ -287,19 +287,7 @@ public:
   }
 };
 
-void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
-  if (!Tok.is(tok::kw_capybara)) {
-    return;
-  }
-
-  InRogerMode = true;
-
-  ConsumeToken();
-
-  CachedTokens Toks;
-
-  ConsumeAndStoreUntil(tok::eof, Toks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
-
+RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
   const char* tokensFileName = "tokens";
   const char* overviewFileName = "overview";
 
@@ -308,8 +296,7 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
   OS.reset(new llvm::raw_fd_ostream(
       tokensFileName, Error,
       llvm::sys::fs::F_Binary));
-  if (!Error.empty())
-    return;
+  assert(Error.empty());
 
   CacheTokensRoger(Toks, OS.get());
   OS->close();
@@ -329,7 +316,6 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
   }
 
   // Parse overview.
-  RogerNamespaceDeclList *rogerDeclList;
   {
     OwningPtr<llvm::MemoryBuffer> File;
 
@@ -338,9 +324,35 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
     RogerOverviewFileParser parser(*File.get(), Toks);
 
-    rogerDeclList = parser.parse();
+    return parser.parse();
+  }
+}
+
+
+void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
+  if (!Tok.is(tok::kw_capybara)) {
+    return;
   }
 
+  InRogerMode = true;
+
+
+  ConsumeToken();
+
+  CachedTokens DefinitionToks;
+  CachedTokens DeclarationToks;
+
+  ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, DefinitionToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+
+  RogerNamespaceDeclList *declarationPart = 0;
+  if (Tok.is(tok::kw_capybara)) {
+    ConsumeAnyToken();
+
+    ConsumeAndStoreUntil(tok::eof, DeclarationToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+    declarationPart = ParseRogerPartOverview(DeclarationToks);
+  }
+
+  RogerNamespaceDeclList *definitionPart = ParseRogerPartOverview(DefinitionToks);
 
   struct MainCallback : Sema::RogerOnDemandParserInt {
     Parser *parser;
@@ -354,14 +366,29 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
   semaCallback.parser = this;
 
   RogerTopLevelDecls topLevelDecls;
+  RogerTopLevelDecls secondaryTopLevelDecls;
 
   Actions.ActOnRogerModeStart(&semaCallback);
 
   RogerParsingNamespace *topParsingNs = new RogerParsingNamespace;
 
-  FillRogerNamespaceWithNames(rogerDeclList, Actions.CurContext, topParsingNs, &topLevelDecls);
+  FillRogerNamespaceWithNames(definitionPart, Actions.CurContext, topParsingNs, &topLevelDecls);
+  if (declarationPart) {
+    FillRogerNamespaceWithNames(declarationPart, Actions.CurContext, topParsingNs, &secondaryTopLevelDecls);
+  }
 
-  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity());
+  // Only finish topLevelDecls.
+  SmallVector<DeclGroupRef, 4> UnwappedTopLevelList(topLevelDecls.List.size());
+  for (DeclGroupPtrTy *it = topLevelDecls.List.begin(); it != topLevelDecls.List.end(); ++it) {
+    UnwappedTopLevelList.push_back(it->get());
+  }
+  SmallVector<DeclGroupRef, 4> SecondUnwappedTopLevelList(topLevelDecls.List.size());
+  for (DeclGroupPtrTy *it = secondaryTopLevelDecls.List.begin(); it != secondaryTopLevelDecls.List.end(); ++it) {
+    SecondUnwappedTopLevelList.push_back(it->get());
+  }
+
+  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &UnwappedTopLevelList);
+  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &SecondUnwappedTopLevelList);
 
   for (size_t i = 0; i < topLevelDecls.List.size(); ++i) {
     Consumer->HandleTopLevelDecl(topLevelDecls.List[i].get());
@@ -1046,13 +1073,16 @@ Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
     return 0;
   }
 
-  Actions.AdjustDeclIfTemplate(TagOrTempResult);
-  CXXRecordDecl *recDecl = cast<CXXRecordDecl>(TagOrTempResult);
+  Decl *ResultDecl = TagOrTempResult;
+  Actions.AdjustDeclIfTemplate(ResultDecl);
+  CXXRecordDecl *recDecl = cast<CXXRecordDecl>(ResultDecl);
+
+  recDecl->rogerState = new RecordDecl::RogerState;
 
   recDecl->pauseDefinitionRoger();
 
   RogerRecordPreparser *lateParser = new RogerRecordPreparser(*this, recDecl, classDecl, parseState.getPos());
-  recDecl->rogerPreparseTypeCallback = lateParser;
+  recDecl->rogerState->parseHeader = lateParser;
 
   return TagOrTempResult;
 }
@@ -1143,10 +1173,111 @@ void Parser::RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespac
     LateParsedDeclaration *lateDecl = parsingNs->LateParsedDeclarations[i];
     lateDecl->ParseLexedMethodDeclarations();
     lateDecl->ParseLexedMethodDefs();
+    lateDecl->ParseRogerLexedStaticInitializers();
     delete lateDecl;
   }
 
   // Implement initializers.
 
   delete parsingNs;
+}
+
+struct Parser::LateParsedStaticVarInitializer::Callback : RogerItemizedLateParseCallback {
+  CachedTokens Toks;
+
+  /// CachedTokens - The sequence of tokens that comprises the initializer,
+  /// including any leading '='.
+  Decl *Field;
+  Parser *Self;
+
+  RogerCallbackGuard guard;
+  bool isInUse;
+  Callback() : isInUse(false) {}
+  bool isBusy() {
+    return isInUse;
+  }
+  void parseDeferred() {
+    RogerCallbackInUseScope inUse(&isInUse);
+    guard.check();
+
+    Self->ParseLexedRogerStaticVarInitializer(this);
+  }
+};
+
+Parser::LateParsedStaticVarInitializer::LateParsedStaticVarInitializer(Parser *P, VarDecl *FD)
+    : Self(P), Field(FD) {
+  Callback *cb = new Callback;
+  callback = cb;
+  cb->Field = FD;
+  cb->Self = P;
+  Field->rogerParseInitializerCallback = cb;
+}
+
+void Parser::LateParsedStaticVarInitializer::ParseRogerLexedStaticInitializers() {
+  if (!Field || !Field->rogerParseInitializerCallback) {
+    return;
+  }
+  Field->rogerParseInitializerCallback->parseDeferred();
+  delete Field->rogerParseInitializerCallback;
+  Field->rogerParseInitializerCallback = 0;
+}
+
+
+CachedTokens &Parser::LateParsedStaticVarInitializer::getToks() {
+  return callback->Toks;
+}
+
+void Parser::ParseLexedRogerStaticVarInitializer(LateParsedStaticVarInitializer::Callback *cb) {
+  if (!cb->Field || cb->Field->isInvalidDecl())
+    return;
+
+  Decl *ThisDecl = cb->Field;
+
+  DeclContext *parent = ThisDecl->getDeclContext();
+  RogerParseScope parseScope(this, parent);
+
+  RogerNestedTokensState parseNestedTokens(this, cb->Toks.begin(), cb->Toks.size());
+
+  // Hack.
+  bool TypeContainsAuto = false;
+
+  if (Tok.is(tok::equal)) {
+    ConsumeToken();
+    ExprResult Init(ParseInitializer());
+    if (Init.isInvalid()) {
+      SkipUntil(tok::comma, true, true);
+      Actions.ActOnInitializerError(ThisDecl);
+    } else {
+      Actions.AddInitializerToDecl(ThisDecl, Init.take(),
+                                   /*DirectInit=*/false, TypeContainsAuto);
+    }
+  } else if (Tok.is(tok::l_paren)) {
+    // Parse C++ direct initializer: '(' expression-list ')'
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    T.consumeOpen();
+
+    ExprVector Exprs;
+    CommaLocsTy CommaLocs;
+
+    if (ParseExpressionList(Exprs, CommaLocs)) {
+      Actions.ActOnInitializerError(ThisDecl);
+      SkipUntil(tok::r_paren);
+    } else {
+      // Match the ')'.
+      T.consumeClose();
+
+      assert(!Exprs.empty() && Exprs.size()-1 == CommaLocs.size() &&
+             "Unexpected number of commas!");
+
+      ExprResult Initializer = Actions.ActOnParenListExpr(T.getOpenLocation(),
+                                                          T.getCloseLocation(),
+                                                          Exprs);
+      Actions.AddInitializerToDecl(ThisDecl, Initializer.take(),
+                                   /*DirectInit=*/true, TypeContainsAuto);
+    }
+  } else {
+    assert(false);
+  }
+  assert(Tok.is(tok::eof));
+  ConsumeAnyToken();
 }

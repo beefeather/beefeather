@@ -1612,7 +1612,7 @@ const char *VarDecl::getStorageClassSpecifierString(StorageClass SC) {
 VarDecl::VarDecl(Kind DK, DeclContext *DC, SourceLocation StartLoc,
                  SourceLocation IdLoc, IdentifierInfo *Id, QualType T,
                  TypeSourceInfo *TInfo, StorageClass SC)
-    : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc), Init() {
+    : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc), Init(), rogerParseInitializerCallback(0) {
   assert(sizeof(VarDeclBitfields) <= sizeof(unsigned));
   assert(sizeof(ParmVarDeclBitfields) <= sizeof(unsigned));
   AllBits = 0;
@@ -3336,7 +3336,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, DeclContext *DC,
                        SourceLocation StartLoc, SourceLocation IdLoc,
                        IdentifierInfo *Id, RecordDecl *PrevDecl)
   : TagDecl(DK, TK, DC, IdLoc, Id, PrevDecl, StartLoc)
-  , rogerPreparseTypeCallback(0), rogerCollectedFields(0) {
+  , rogerState(0) {
   HasFlexibleArrayMember = false;
   AnonymousStructOrUnion = false;
   HasObjectMember = false;

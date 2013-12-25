@@ -2770,6 +2770,22 @@ void CodeGenModule::EmitNamespace(const NamespaceDecl *ND) {
   }
 }
 
+void CodeGenModule::EmitRecordRoger(const RecordDecl *RD) {
+  for (RecordDecl::decl_iterator I = RD->decls_begin(), E = RD->decls_end();
+       I != E; ++I) {
+    if (const VarDecl *VD = dyn_cast<VarDecl>(*I)) {
+      if (VD->isStaticDataMember()) {
+        EmitGlobalDefinition(VD);
+      }
+    } else if (const RecordDecl *NestedD = dyn_cast<RecordDecl>(*I)) {
+      if (!NestedD->isImplicit()) {
+        EmitRecordRoger(NestedD);
+      }
+    }
+  }
+}
+
+
 // EmitLinkageSpec - Emit all declarations in a linkage spec.
 void CodeGenModule::EmitLinkageSpec(const LinkageSpecDecl *LSD) {
   if (LSD->getLanguage() != LinkageSpecDecl::lang_c &&
@@ -2937,7 +2953,14 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
     ImportedModules.insert(Import->getImportedModule());
     break;
- }
+  }
+  case Decl::CXXRecord: {
+    RecordDecl *RD = cast<RecordDecl>(D);
+    if (RD->isRogerRec()) {
+      EmitRecordRoger(RD);
+    }
+    break;
+  }
 
   default:
     // Make sure we handled everything we should, every other kind is a

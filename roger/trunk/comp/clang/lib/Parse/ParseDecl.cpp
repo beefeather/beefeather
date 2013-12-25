@@ -1860,9 +1860,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(Declarator &D,
 
   bool TypeContainsAuto = D.getDeclSpec().containsPlaceholderType();
 
-  // Parse declarator '=' initializer.
-  // If a '==' or '+=' is found, suggest a fixit to '='.
-  if (isTokenEqualOrEqualTypo()) {
+  if (Actions.IsInRogerMode() && !D.getCXXScopeSpec().isSet() && (Tok.is(tok::l_paren) || Tok.is(tok::equal))) {
+    ParseCXXNonStaticOrRogerMemberInitializer(ThisDecl, true, false);
+
+    // Parse declarator '=' initializer.
+    // If a '==' or '+=' is found, suggest a fixit to '='.
+  } else if (isTokenEqualOrEqualTypo()) {
     ConsumeToken();
 
     if (Tok.is(tok::kw_delete)) {

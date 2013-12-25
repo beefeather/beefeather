@@ -2309,7 +2309,7 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         if (ThisDecl)
           ThisDecl->setInvalidDecl();
       } else
-        ParseCXXNonStaticOrRogerMemberInitializer(ThisDecl, DeclaratorInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static);
+        ParseCXXNonStaticOrRogerMemberInitializer(ThisDecl, DeclaratorInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static, true);
     } else if (HasInitializer) {
       // Normal initializer.
       if (!Init.isUsable())

@@ -1200,6 +1200,10 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
+
+  // Roger.
+public:
+  RogerItemizedLateParseCallback* rogerParseInitializerCallback;
 };
 
 class ImplicitParamDecl : public VarDecl {
@@ -1551,8 +1555,7 @@ protected:
       IsConstexpr(isConstexprSpecified), HasSkippedBody(false),
       EndRangeLoc(NameInfo.getEndLoc()),
       TemplateOrSpecialization(),
-      DNLoc(NameInfo.getInfo()),
-      RogerPlannedForLateParsing(false) {}
+      DNLoc(NameInfo.getInfo()) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   virtual FunctionDecl *getNextRedeclaration() { return RedeclLink.getNext(); }
@@ -2111,8 +2114,6 @@ public:
 
   // Roger.
 public:
-  // Remove this.
-  bool RogerPlannedForLateParsing;
 };
 
 
@@ -3137,12 +3138,32 @@ public:
   /// commandline option.
   bool isMsStruct(const ASTContext &C) const;
 
-  RogerItemizedLateParseCallback* rogerPreparseTypeCallback;
+  struct RogerState {
+    enum Step {
+      FORWARD,
+      PREPARSING,
+      PREPARSE_DONE,
+      FILLING_NAMES,
+      FILL_NAMES_DONE,
+      COMPLETING,
+      COMPLETE
+    };
+    Step currentStep;
 
-  std::vector<FieldDecl*> *rogerCollectedFields;
-  llvm::ilist<UnparsedNamedDecl> rogerConstructorDecls;
-  llvm::ilist<UnparsedNamedDecl> rogerDestructorDecls;
-  llvm::ilist<UnparsedNamedDecl> rogerConversionDecls;
+    RogerItemizedLateParseCallback* parseHeader;
+
+    std::vector<FieldDecl*> *rogerCollectedFields;
+    llvm::ilist<UnparsedNamedDecl> rogerConstructorDecls;
+    llvm::ilist<UnparsedNamedDecl> rogerDestructorDecls;
+    llvm::ilist<UnparsedNamedDecl> rogerConversionDecls;
+    RogerState() : currentStep(FORWARD), parseHeader(0), rogerCollectedFields(0) {}
+  };
+
+  RogerState *rogerState;
+
+  bool isRogerRec() {
+    return bool(rogerState);
+  }
 
 private:
   /// \brief Deserialize just the fields.

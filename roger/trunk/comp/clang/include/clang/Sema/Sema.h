@@ -7550,15 +7550,16 @@ public:
   void ActOnConversionDeclarationRoger(RogerItemizedLateParseCallback *callback);
   void ActOnConstructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
   void ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
-  void ActOnNamespaceFinishRoger(DeclContext* ns);
-  void CompleteDeclContextRoger(DeclContext* ns);
+  void ActOnNamespaceFinishRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
+  void CompleteDeclContextRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
+  void CompleteDeclRoger(Decl* D);
 
 
   void MaterializeRogerContructors(RecordDecl *Class);
   void MaterializeRogerDestructors(RecordDecl *Class);
   void MaterializeRogerConversionOperators(RecordDecl *Class);
   void MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Redecl);
-  void InstantiateFunctionDefinitionRoger(FunctionDecl *Function);
+  //void InstantiateFunctionDefinitionRoger(FunctionDecl *Function);
 
   NamespaceDecl *ActOnRogerNamespaceDef(Scope *NamespcScope,
       IdentifierInfo *II,

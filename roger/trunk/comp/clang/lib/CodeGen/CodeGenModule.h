@@ -1034,6 +1034,7 @@ private:
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
 
   void EmitNamespace(const NamespaceDecl *D);
+  void EmitRecordRoger(const RecordDecl *D);
   void EmitLinkageSpec(const LinkageSpecDecl *D);
   void CompleteDIClassType(const CXXMethodDecl* D);
 

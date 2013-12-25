@@ -1814,6 +1814,16 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   }
 
   // Dig out the initializer, and use the declaration which it's attached to.
+  if (VD->rogerParseInitializerCallback) {
+    VarDecl *VD2 = const_cast<VarDecl *>(VD);
+    if (VD2->rogerParseInitializerCallback->isBusy()) {
+      llvm::outs() << "Cyclic initializer";
+    } else {
+      VD2->rogerParseInitializerCallback->parseDeferred();
+      delete VD2->rogerParseInitializerCallback;
+      VD2->rogerParseInitializerCallback = 0;
+    }
+  }
   const Expr *Init = VD->getAnyInitializer(VD);
   if (!Init || Init->isValueDependent()) {
     // If we're checking a potential constant expression, the variable could be

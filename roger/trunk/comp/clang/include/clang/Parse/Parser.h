@@ -944,6 +944,22 @@ private:
     CachedTokens Toks;
   };
 
+  struct LateParsedStaticVarInitializer : public LateParsedDeclaration {
+    LateParsedStaticVarInitializer(Parser *P, VarDecl *FD);
+
+    virtual void ParseRogerLexedStaticInitializers();
+
+    Parser *Self;
+
+    /// Field - The field declaration.
+    VarDecl *Field;
+
+    CachedTokens &getToks();
+    struct Callback;
+    // Might be deleted.
+    Callback *callback;
+  };
+
   /// LateParsedDeclarationsContainer - During parsing of a top (non-nested)
   /// C++ class, its method declarations that contain parts that won't be
   /// parsed until after the definition is completed (C++ [class.mem]p2),
@@ -1105,7 +1121,7 @@ private:
                                 const VirtSpecifiers& VS,
                                 FunctionDefinitionKind DefinitionKind,
                                 ExprResult& Init);
-  void ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic);
+  void ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic, bool isMember);
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
                                bool EnterScope, bool OnDefinition);
@@ -2327,6 +2343,7 @@ private:
   Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
       const ParsedTemplateInfo &TemplateInfo,
       AccessSpecifier AS, RogerNestedTokensState &parseState);
+  RogerNamespaceDeclList* ParseRogerPartOverview(CachedTokens &Toks);
 
 public:
   void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, int tokenOffset);
@@ -2336,6 +2353,8 @@ public:
   void RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs);
 
   void ParseRogerPartOpt(ASTConsumer *Consumer);
+
+  void ParseLexedRogerStaticVarInitializer(LateParsedStaticVarInitializer::Callback *cb);
 
   friend class clang::RogerParseScope;
   friend class clang::RogerRecordParseScope;

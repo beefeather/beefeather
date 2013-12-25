@@ -8269,7 +8269,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
     } else if (VDecl->isConstexpr()) {
 
     // Require constness.
-    } else if (!DclT.isConstQualified()) {
+    } else if (!DclT.isConstQualified() && !IsInRogerMode()) {
       Diag(VDecl->getLocation(), diag::err_in_class_initializer_non_const)
         << Init->getSourceRange();
       VDecl->setInvalidDecl();

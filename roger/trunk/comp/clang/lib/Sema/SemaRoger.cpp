@@ -38,30 +38,30 @@ void Sema::ActOnNamedDeclarationRoger(DeclarationName Name, RogerItemizedLatePar
   CurContext->unparsedDecls.push_back(node);
 }
 
-static void AddRogerDeclarationToCurrentRecord(RogerItemizedLateParseCallback *callback, DeclContext *dc, llvm::ilist<DeclContext::UnparsedNamedDecl> RecordDecl::* field) {
+static void AddRogerDeclarationToCurrentRecord(RogerItemizedLateParseCallback *callback, DeclContext *dc, llvm::ilist<DeclContext::UnparsedNamedDecl> RecordDecl::RogerState::* field) {
   RecordDecl *rd = cast<RecordDecl>(dc);
   DeclContext::UnparsedNamedDecl *node = new DeclContext::UnparsedNamedDecl;
   node->name = DeclarationName();
   node->callback = callback;
-  (rd->*field).push_back(node);
+  (rd->rogerState->*field).push_back(node);
 }
 
 void Sema::ActOnConversionDeclarationRoger(RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::rogerConversionDecls);
+  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::RogerState::rogerConversionDecls);
 }
 void Sema::ActOnConstructorDeclarationRoger(RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::rogerConstructorDecls);
+  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::RogerState::rogerConstructorDecls);
 }
 void Sema::ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::rogerDestructorDecls);
+  AddRogerDeclarationToCurrentRecord(callback, CurContext, &RecordDecl::RogerState::rogerDestructorDecls);
 }
 
 
-void Sema::ActOnNamespaceFinishRoger(DeclContext* ns) {
-  CompleteDeclContextRoger(ns);
+void Sema::ActOnNamespaceFinishRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList) {
+  CompleteDeclContextRoger(ns, TopLevelList);
 }
 
-void Sema::CompleteDeclContextRoger(DeclContext* ns) {
+void Sema::CompleteDeclContextRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList) {
   while (!ns->unparsedDecls.empty()) {
     DeclarationName Name = ns->unparsedDecls.begin()->name;
 
@@ -89,25 +89,16 @@ void Sema::CompleteDeclContextRoger(DeclContext* ns) {
     MaterializeRogerConversionOperators(rec);
   }
 
-  for (DeclContext::decl_iterator it = ns->decls_begin(); it != ns->decls_end(); ++it) {
-    if (FunctionDecl *FnD = dyn_cast<FunctionDecl>(*it)) {
-      // Remove this.
-      if (FnD->RogerPlannedForLateParsing) {
-        InstantiateFunctionDefinitionRoger(FnD);
-        FnD->RogerPlannedForLateParsing = false;
+  if (false &&            TopLevelList) {
+    for (DeclGroupRef *it = TopLevelList->begin(); it != TopLevelList->end(); ++it) {
+      DeclGroupRef &DG = *it;
+      for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I) {
+        CompleteDeclRoger(*I);
       }
-    } else if (NamespaceDecl *NsD = dyn_cast<NamespaceDecl>(*it)) {
-      if (NsD->RogerNameFillCallback) {
-        assert(!NsD->RogerNameFillCallback->isBusy());
-        NsD->RogerNameFillCallback->parseDeferred();
-        delete NsD->RogerNameFillCallback;
-        NsD->RogerNameFillCallback = 0;
-      }
-      ActOnNamespaceFinishRoger(NsD);
-    } else if (RecordDecl *RecD = dyn_cast<RecordDecl>(*it)) {
-      if (!RecD->isImplicit()) {
-        RequireCompleteRecordRoger(RecD, RRCR_FULL);
-      }
+    }
+  } else {
+    for (DeclContext::decl_iterator it = ns->decls_begin(); it != ns->decls_end(); ++it) {
+      CompleteDeclRoger(*it);
     }
   }
 
@@ -119,19 +110,35 @@ void Sema::CompleteDeclContextRoger(DeclContext* ns) {
   }
 }
 
-void Sema::InstantiateFunctionDefinitionRoger(FunctionDecl *Function) {
-  if (Function->isInvalidDecl())
-    return;
-
-  if (Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
-      !Function->getClassScopeSpecializationPattern())
-    return;
-
-  assert(RogerOnDemandParser && "RogerOnDemandParser problemo");
-  LateParsedTemplate *LPT = LateParsedTemplateMap.lookup(Function);
-  assert(LPT && "missing LateParsedTemplate");
-  RogerOnDemandParser->ParseFunction(*LPT);
+void Sema::CompleteDeclRoger(Decl* D) {
+  if (NamespaceDecl *NsD = dyn_cast<NamespaceDecl>(D)) {
+    if (NsD->RogerNameFillCallback) {
+      assert(!NsD->RogerNameFillCallback->isBusy());
+      NsD->RogerNameFillCallback->parseDeferred();
+      delete NsD->RogerNameFillCallback;
+      NsD->RogerNameFillCallback = 0;
+    }
+    ActOnNamespaceFinishRoger(NsD, 0);
+  } else if (RecordDecl *RecD = dyn_cast<RecordDecl>(D)) {
+    if (!RecD->isImplicit()) {
+      RequireCompleteRecordRoger(RecD, RRCR_FULL);
+    }
+  }
 }
+
+//void Sema::InstantiateFunctionDefinitionRoger(FunctionDecl *Function) {
+//  if (Function->isInvalidDecl())
+//    return;
+//
+//  if (Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
+//      !Function->getClassScopeSpecializationPattern())
+//    return;
+//
+//  assert(RogerOnDemandParser && "RogerOnDemandParser problemo");
+//  LateParsedTemplate *LPT = LateParsedTemplateMap.lookup(Function);
+//  assert(LPT && "missing LateParsedTemplate");
+//  RogerOnDemandParser->ParseFunction(*LPT);
+//}
 
 static void MaterializeRogerList(Sema &S, llvm::ilist<DeclContext::UnparsedNamedDecl> &list, DeclContext* dc) {
   if (dc->RogerNameFillCallback) {
@@ -156,13 +163,19 @@ static void MaterializeRogerList(Sema &S, llvm::ilist<DeclContext::UnparsedNamed
 }
 
 void Sema::MaterializeRogerContructors(RecordDecl *Class) {
-  MaterializeRogerList(*this, Class->rogerConstructorDecls, Class);
+  if (Class->rogerState) {
+    MaterializeRogerList(*this, Class->rogerState->rogerConstructorDecls, Class);
+  }
 }
 void Sema::MaterializeRogerDestructors(RecordDecl *Class) {
-  MaterializeRogerList(*this, Class->rogerDestructorDecls, Class);
+  if (Class->rogerState) {
+    MaterializeRogerList(*this, Class->rogerState->rogerDestructorDecls, Class);
+  }
 }
 void Sema::MaterializeRogerConversionOperators(RecordDecl *Class) {
-  MaterializeRogerList(*this, Class->rogerConversionDecls, Class);
+  if (Class->rogerState) {
+    MaterializeRogerList(*this, Class->rogerState->rogerConversionDecls, Class);
+  }
 }
 
 
@@ -228,43 +241,58 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
   RogerLogScope logScope("RequireCompleteRecordRoger");
   Rec->printName(llvm::outs());
   llvm::outs() << "\n";
-
-  if (Rec->rogerPreparseTypeCallback || Rec->RogerNameFillCallback) {
-    if (Rec->rogerPreparseTypeCallback) {
-      if (Rec->rogerPreparseTypeCallback->isBusy()) {
-        llvm::outs() << "busy\n";
-        return true;
-      }
-      Rec->rogerPreparseTypeCallback->parseDeferred();
-      delete Rec->rogerPreparseTypeCallback;
-      Rec->rogerPreparseTypeCallback = 0;
-    }
-    if (RogerOnlyInheritance == RRCR_INHERITANCE) {
-      return true;
-    }
-
-    if (Rec->RogerNameFillCallback) {
-      if (Rec->RogerNameFillCallback->isBusy()) {
-        llvm::outs() << "busy\n";
-        return true;
-      }
-      Rec->RogerNameFillCallback->parseDeferred();
-      delete Rec->RogerNameFillCallback;
-      Rec->RogerNameFillCallback = 0;
-    }
-
-    if (RogerOnlyInheritance == RRCR_NESTED) {
-      return true;
-    }
-  }
-
-  if (!Rec->isBeingDefinedRoger()) {
+  RecordDecl::RogerState *state = Rec->rogerState;
+  if (!state) {
     return false;
   }
+  if (state->currentStep == RecordDecl::RogerState::PREPARSING) {
+    llvm::outs() << "Required while preparsing\n";
+    return false;
+  }
+  if (state->currentStep == RecordDecl::RogerState::FORWARD) {
+    RogerLogScope logScope("parsing header as required");
+    assert(state->parseHeader);
+    state->currentStep = RecordDecl::RogerState::PREPARSING;
+    state->parseHeader->parseDeferred();
+    delete state->parseHeader;
+    state->parseHeader = 0;
+    state->currentStep = RecordDecl::RogerState::PREPARSE_DONE;
+  }
+  if (RogerOnlyInheritance == RRCR_INHERITANCE) {
+    return true;
+  }
+  if (state->currentStep == RecordDecl::RogerState::FILLING_NAMES) {
+    llvm::outs() << "Required while filling names\n";
+    return false;
+  }
+  if (state->currentStep == RecordDecl::RogerState::PREPARSE_DONE) {
+    RogerLogScope logScope("filling names as required");
+    assert(Rec->RogerNameFillCallback);
+    state->currentStep = RecordDecl::RogerState::FILLING_NAMES;
+    Rec->RogerNameFillCallback->parseDeferred();
+    delete Rec->RogerNameFillCallback;
+    Rec->RogerNameFillCallback = 0;
+    state->currentStep = RecordDecl::RogerState::FILL_NAMES_DONE;
+  }
+  if (RogerOnlyInheritance == RRCR_NESTED) {
+    return true;
+  }
+  if (state->currentStep == RecordDecl::RogerState::COMPLETING) {
+    llvm::outs() << "Required while completing\n";
+    return false;
+  }
+  if (state->currentStep == RecordDecl::RogerState::FILL_NAMES_DONE) {
+    RogerLogScope logScope("completing record as required");
+    state->currentStep = RecordDecl::RogerState::COMPLETING;
 
-  CompleteDeclContextRoger(Rec);
+    assert(Rec->isBeingDefinedRoger());
 
-  ActOnFinishCXXMemberSpecificationRoger(Rec);
+    CompleteDeclContextRoger(Rec, 0);
+
+    ActOnFinishCXXMemberSpecificationRoger(Rec);
+    state->currentStep = RecordDecl::RogerState::COMPLETE;
+  }
+  assert(state->currentStep == RecordDecl::RogerState::COMPLETE);
   return false;
 }
 
@@ -296,18 +324,19 @@ void Sema::ActOnFinishCXXMemberSpecificationRoger(RecordDecl *TagDecl) {
 
   Decl** fieldsStart = 0;
   int fieldsSize = 0;
-  if (TagDecl->rogerCollectedFields) {
-    fieldsStart = reinterpret_cast<Decl**>(TagDecl->rogerCollectedFields->data());
-    fieldsSize = TagDecl->rogerCollectedFields->size();
+  RecordDecl::RogerState *rogerState = TagDecl->rogerState;
+  if (rogerState->rogerCollectedFields) {
+    fieldsStart = reinterpret_cast<Decl**>(rogerState->rogerCollectedFields->data());
+    fieldsSize = rogerState->rogerCollectedFields->size();
   }
 
   ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(
               // strict aliasing violation!
       fieldsStart, fieldsSize), LBrac, RBrac, AttrList);
 
-  if (TagDecl->rogerCollectedFields) {
-    delete TagDecl->rogerCollectedFields;
-    TagDecl->rogerCollectedFields = 0;
+  if (rogerState->rogerCollectedFields) {
+    delete rogerState->rogerCollectedFields;
+    rogerState->rogerCollectedFields = 0;
   }
 
   CheckCompletedCXXClass(
@@ -418,13 +447,14 @@ NamespaceDecl *Sema::ActOnRogerNamespaceDef(Scope *NamespcScopeIgnore,
 
 void Sema::ActOnTagPauseDefinitionRoger(Decl *TagD) {
   if (RecordDecl *rd = dyn_cast<RecordDecl>(TagD)) {
+    RecordDecl::RogerState *rogerState = rd->rogerState;
     if (FieldCollector->getCurNumFields()) {
-      if (!rd->rogerCollectedFields) {
-        rd->rogerCollectedFields = new std::vector<FieldDecl*>;
+      if (!rogerState->rogerCollectedFields) {
+        rogerState->rogerCollectedFields = new std::vector<FieldDecl*>;
       }
       FieldDecl **pos = FieldCollector->getCurFields();
       for (size_t i = 0; i < FieldCollector->getCurNumFields(); ++i) {
-        rd->rogerCollectedFields->push_back(pos[i]);
+        rogerState->rogerCollectedFields->push_back(pos[i]);
       }
     }
   }
