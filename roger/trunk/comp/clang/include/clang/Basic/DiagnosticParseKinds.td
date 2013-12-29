@@ -857,6 +857,8 @@ def err_function_declaration_not_allowed_roger : Error<
   "function (forward) declaration is not allowed in roger mode">;
 def err_roger_invalid_token_before_region_end : Error<
   "invalid extra '%0' at end of declaration (Roger mode)">;
+def err_roger_invalid_non_type_region : Error<
+  "unrecognized (non-type) part: '%0' (Roger mode)">;
 
 
 } // end of Parser diagnostics

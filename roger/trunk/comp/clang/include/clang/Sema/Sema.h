@@ -415,6 +415,7 @@ public:
   };
 
   class RogerLogScope {
+    const static bool mute;
     const char *myText;
     static int indent;
     void printIndent() {
@@ -425,15 +426,38 @@ public:
 
   public:
     RogerLogScope(const char *text) : myText(text) {
+      if (mute) {
+        return;
+      }
       printIndent();
       llvm::outs() << ">> " << myText << "\n";
       ++indent;
     }
     ~RogerLogScope() {
+      if (mute) {
+        return;
+      }
       --indent;
       printIndent();
       llvm::outs() << "<< (" << myText << ")\n";
     }
+    raw_ostream &outs() {
+      if (mute) {
+        return llvm::nulls();
+      } else {
+        return llvm::outs();
+      }
+    }
+    raw_ostream &outs_nl() {
+      if (mute) {
+        return llvm::nulls();
+      } else {
+        printIndent();
+        return llvm::outs();
+      }
+    }
+
+
   };
 
 

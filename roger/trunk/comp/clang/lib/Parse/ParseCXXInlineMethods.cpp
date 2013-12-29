@@ -138,7 +138,11 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
   // Consume the tokens and store them for later parsing.
 
   LexedMethod* LM = new LexedMethod(this, FnD);
-  getCurrentClass().LateParsedDeclarations.push_back(LM);
+  if (Actions.IsInRogerMode()) {
+    rogerParsingQueue->addAndWrap(LM, FnD->getDeclContext());
+  } else {
+    getCurrentClass().LateParsedDeclarations.push_back(LM);
+  }
   LM->TemplateScope = getCurScope()->isTemplateParamScope();
   CachedTokens &Toks = LM->Toks;
 
@@ -214,9 +218,11 @@ void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic
     lateDecl = MI;
   }
 
-  LateParsedDeclarationsContainer &LateParsedDeclarations =
-      isMember ? getCurrentClass().LateParsedDeclarations : RogerNamespaceStack.top()->LateParsedDeclarations;
-  LateParsedDeclarations.push_back(lateDecl);
+  if (Actions.IsInRogerMode()) {
+    rogerParsingQueue->addAndWrap(lateDecl, VarD->getDeclContext());
+  } else {
+    getCurrentClass().LateParsedDeclarations.push_back(lateDecl);
+  }
   CachedTokens &Toks = *ToksPointer;
 
   tok::TokenKind kind = Tok.getKind();

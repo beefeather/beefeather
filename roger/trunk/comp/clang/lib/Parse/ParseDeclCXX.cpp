@@ -1790,11 +1790,11 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
         // Push this method onto the stack of late-parsed method
         // declarations.
         LateMethod = new LateParsedMethodDeclaration(this, ThisDecl);
-        LateParsedDeclarationsContainer &LateParsedDeclarations =
-            isNamespaceForRoger
-            ? RogerNamespaceStack.top()->LateParsedDeclarations
-            : getCurrentClass().LateParsedDeclarations;
-        LateParsedDeclarations.push_back(LateMethod);
+        if (Actions.IsInRogerMode()) {
+          rogerParsingQueue->addAndWrap(LateMethod, ThisDecl->getDeclContext());
+        } else {
+          getCurrentClass().LateParsedDeclarations.push_back(LateMethod);
+        }
         LateMethod->TemplateScope = getCurScope()->isTemplateParamScope();
 
         // Add all of the parameters prior to this one (they don't

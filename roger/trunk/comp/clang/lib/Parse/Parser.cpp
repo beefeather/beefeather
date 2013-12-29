@@ -55,7 +55,8 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   : PP(pp), Actions(actions), Diags(PP.getDiagnostics()),
     GreaterThanIsOperator(true), ColonIsSacred(false), 
     InMessageExpression(false), TemplateParameterDepth(0),
-    ParsingInObjCContainer(false), InRogerMode(false) {
+    ParsingInObjCContainer(false), rogerParsingQueue(0) {
+  TemplateIdsBeingCovered = false;
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);
@@ -538,30 +539,34 @@ void Parser::Initialize() {
   ConsumeToken();
 }
 
+Parser::DestroyTemplateIdAnnotationsRAIIObj::~DestroyTemplateIdAnnotationsRAIIObj() {
+  beingCovered = beingCoveredSaved;
+  if (prevSize > 0) {
+    // Must be in roger mode.
+    while (Container.size() > prevSize) {
+      Container.back()->Destroy();
+      Container.pop_back();
+    }
+    return;
+  }
+  for (SmallVectorImpl<TemplateIdAnnotation *>::iterator I =
+       Container.begin(), E = Container.end();
+       I != E; ++I)
+    (*I)->Destroy();
+  Container.clear();
+}
+
+
 namespace {
   /// \brief RAIIObject to destroy the contents of a SmallVector of
   /// TemplateIdAnnotation pointers and clear the vector.
-  class DestroyTemplateIdAnnotationsRAIIObj {
-    SmallVectorImpl<TemplateIdAnnotation *> &Container;
-  public:
-    DestroyTemplateIdAnnotationsRAIIObj(SmallVectorImpl<TemplateIdAnnotation *>
-                                       &Container)
-      : Container(Container) {}
-
-    ~DestroyTemplateIdAnnotationsRAIIObj() {
-      for (SmallVectorImpl<TemplateIdAnnotation *>::iterator I =
-           Container.begin(), E = Container.end();
-           I != E; ++I)
-        (*I)->Destroy();
-      Container.clear();
-    }
-  };
+  typedef Parser::DestroyTemplateIdAnnotationsRAIIObj DestroyTemplateIdAnnotationsRAIIObj;
 }
 
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
 /// action tells us to.  This returns true if the EOF was encountered.
 bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
-  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
 
   // Skip over the EOF token, flagging end of previous input for incremental 
   // processing
@@ -617,7 +622,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
 Parser::DeclGroupPtrTy
 Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                  ParsingDeclSpec *DS) {
-  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds);
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   if (PP.isCodeCompletionReached()) {
@@ -994,7 +999,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // tokens and store them for late parsing at the end of the translation unit.
   bool skipBecauseTemplate = getLangOpts().DelayedTemplateParsing &&
       TemplateInfo.Kind == ParsedTemplateInfo::Template;
-  if (Tok.isNot(tok::equal) && (skipBecauseTemplate || InRogerMode)) {
+  if (Tok.isNot(tok::equal) && (skipBecauseTemplate || Actions.IsInRogerMode())) {
     TemplateParameterList **TemplateParamsBegin;
     size_t TemplateParamsSize = 0;
     if (TemplateInfo.TemplateParams) {
@@ -1031,7 +1036,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
         Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
       } else {
         LexedMethod* LM = new LexedMethod(this, FnD);
-        RogerNamespaceStack.top()->LateParsedDeclarations.push_back(LM);
+        rogerParsingQueue->addAndWrap(LM, FnD->getDeclContext());
         LM->TemplateScope = false;
         LM->Toks.swap(Toks);
       }

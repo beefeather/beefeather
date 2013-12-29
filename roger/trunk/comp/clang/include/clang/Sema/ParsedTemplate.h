@@ -182,7 +182,8 @@ namespace clang {
     /// \brief Creates a new TemplateIdAnnotation with NumArgs arguments and
     /// appends it to List.
     static TemplateIdAnnotation *
-    Allocate(unsigned NumArgs, SmallVectorImpl<TemplateIdAnnotation*> &List) {
+    Allocate(unsigned NumArgs, SmallVectorImpl<TemplateIdAnnotation*> &List, bool beingCovered) {
+      assert(beingCovered);
       TemplateIdAnnotation *TemplateId
         = (TemplateIdAnnotation *)std::malloc(sizeof(TemplateIdAnnotation) +
                                       sizeof(ParsedTemplateArgument) * NumArgs);

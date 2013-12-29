@@ -184,20 +184,19 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
     return;
   }
 
-  RogerLogScope logScope("MaterializeRogerNames");
-  llvm::outs() << Name;
-  if (NamedDecl *nd = dyn_cast<NamedDecl>(dc)) {
-    llvm::outs() << " in ";
-    nd->printName(llvm::outs());
-  }
-  if (Redecl) {
-    llvm::outs() << " for redeclaration";
-  }
-  llvm::outs() << "\n";
-
   if (dc->RogerNameFillCallback) {
+    RogerLogScope logScope("MaterializeRogerNames 1: fill names");
+    logScope.outs_nl() << Name;
+    if (NamedDecl *nd = dyn_cast<NamedDecl>(dc)) {
+      logScope.outs() << " in ";
+      nd->printName(logScope.outs());
+    }
+    if (Redecl) {
+      logScope.outs() << " for redeclaration";
+    }
+    logScope.outs() << " item(s)\n";
     if (dc->RogerNameFillCallback->isBusy()) {
-      llvm::outs() << "busy\n";
+      logScope.outs_nl() << "busy\n";
       return;
     }
     dc->RogerNameFillCallback->parseDeferred();
@@ -217,12 +216,28 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
       ++it;
     }
   }
-  for (llvm::ilist<DeclContext::UnparsedNamedDecl>::iterator it = todo.begin(); it != todo.end(); ++it) {
-    DeclContext *savedContext = CurContext;
-    CurContext = dc;
-    it->callback->parseDeferred();
-    delete it->callback;
-    CurContext = savedContext;
+  if (!todo.size()) {
+    return;
+  }
+  {
+    RogerLogScope logScope("MaterializeRogerNames 2: go over items");
+    logScope.outs_nl() << Name;
+    if (NamedDecl *nd = dyn_cast<NamedDecl>(dc)) {
+      logScope.outs() << " in ";
+      nd->printName(logScope.outs());
+    }
+    if (Redecl) {
+      logScope.outs() << " for redeclaration";
+    }
+    logScope.outs() << todo.size() << " item(s)\n";
+
+    for (llvm::ilist<DeclContext::UnparsedNamedDecl>::iterator it = todo.begin(); it != todo.end(); ++it) {
+      DeclContext *savedContext = CurContext;
+      CurContext = dc;
+      it->callback->parseDeferred();
+      delete it->callback;
+      CurContext = savedContext;
+  }
   }
 }
 
@@ -238,15 +253,15 @@ bool Sema::RequireCompleteTypeRoger(QualType T, RogerRequireCompleteReason Roger
 }
 
 bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReason RogerOnlyInheritance) {
-  RogerLogScope logScope("RequireCompleteRecordRoger");
-  Rec->printName(llvm::outs());
-  llvm::outs() << "\n";
   RecordDecl::RogerState *state = Rec->rogerState;
   if (!state) {
     return false;
   }
+  RogerLogScope logScope("RequireCompleteRecordRoger");
+  Rec->printName(logScope.outs_nl());
+  logScope.outs() << "\n";
   if (state->currentStep == RecordDecl::RogerState::PREPARSING) {
-    llvm::outs() << "Required while preparsing\n";
+    logScope.outs_nl() << "Required while preparsing\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::FORWARD) {
@@ -262,7 +277,7 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
     return true;
   }
   if (state->currentStep == RecordDecl::RogerState::FILLING_NAMES) {
-    llvm::outs() << "Required while filling names\n";
+    logScope.outs_nl() << "Required while filling names\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::PREPARSE_DONE) {
@@ -278,7 +293,7 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
     return true;
   }
   if (state->currentStep == RecordDecl::RogerState::COMPLETING) {
-    llvm::outs() << "Required while completing\n";
+    logScope.outs_nl() << "Required while completing\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::FILL_NAMES_DONE) {
@@ -500,11 +515,9 @@ void Sema::ActOnTagResumeDefinitionRoger(Scope *S, Decl *TagD) {
 
 
 void Sema::RogerDefineRecord(CXXRecordDecl *decl) {
-//  if (decl->RogerNameFillCallback) {
-//    decl->RogerNameFillCallback->parseDeferred();
-//    delete decl->RogerNameFillCallback;
-//    decl->RogerNameFillCallback = 0;
-//  }
+  if (decl->isRogerRec()) {
+    RequireCompleteRecordRoger(decl, RRCR_INHERITANCE);
+  }
 }
 
 //void Sema::ActOnPauseCXXMemberDeclarationsRoger(Scope *S, Decl *TagD) {
@@ -586,3 +599,5 @@ void Sema::ActOnRogerModeFinish() {
 bool Sema::IsInRogerMode() {
   return this->RogerOnDemandParser;
 }
+
+const bool Sema::RogerLogScope::mute = false;

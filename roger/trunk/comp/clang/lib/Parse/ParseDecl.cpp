@@ -1647,7 +1647,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
     // { anti-diff
 
-    } else if (InRogerMode) {
+    } else if (Actions.IsInRogerMode()) {
       Diag(Tok, diag::err_function_declaration_not_allowed_roger);
     }
   }
@@ -1860,7 +1860,9 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(Declarator &D,
 
   bool TypeContainsAuto = D.getDeclSpec().containsPlaceholderType();
 
-  if (Actions.IsInRogerMode() && !D.getCXXScopeSpec().isSet() && (Tok.is(tok::l_paren) || Tok.is(tok::equal))) {
+  if (Actions.IsInRogerMode() &&
+      (D.getContext() == Declarator::FileContext || D.getContext() == Declarator::MemberContext)
+          && !D.getCXXScopeSpec().isSet() && (Tok.is(tok::l_paren) || Tok.is(tok::equal))) {
     ParseCXXNonStaticOrRogerMemberInitializer(ThisDecl, true, false);
 
     // Parse declarator '=' initializer.

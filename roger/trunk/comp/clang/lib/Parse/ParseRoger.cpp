@@ -328,96 +328,25 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
   }
 }
 
+struct Parser::RogerParsingQueue::Item {
+  DeclContext *DC;
+  LateParsedDeclaration *lateDecl;
+};
 
-void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
-  if (!Tok.is(tok::kw_capybara)) {
-    return;
+Parser::RogerParsingQueue::Item *Parser::RogerParsingQueue::pop() {
+  if (List.empty()) {
+    return 0;
   }
-
-  InRogerMode = true;
-
-
-  ConsumeToken();
-
-  CachedTokens DefinitionToks;
-  CachedTokens DeclarationToks;
-
-  ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, DefinitionToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
-
-  RogerNamespaceDeclList *declarationPart = 0;
-  if (Tok.is(tok::kw_capybara)) {
-    ConsumeAnyToken();
-
-    ConsumeAndStoreUntil(tok::eof, DeclarationToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
-    declarationPart = ParseRogerPartOverview(DeclarationToks);
-  }
-
-  RogerNamespaceDeclList *definitionPart = ParseRogerPartOverview(DefinitionToks);
-
-  struct MainCallback : Sema::RogerOnDemandParserInt {
-    Parser *parser;
-    RogerCallbackGuard guard;
-    void ParseFunction(LateParsedTemplate &LPT) {
-      guard.check();
-      parser->ParseLateTemplatedFuncDef(LPT);
-    }
-  };
-  MainCallback semaCallback;
-  semaCallback.parser = this;
-
-  RogerTopLevelDecls topLevelDecls;
-  RogerTopLevelDecls secondaryTopLevelDecls;
-
-  Actions.ActOnRogerModeStart(&semaCallback);
-
-  RogerParsingNamespace *topParsingNs = new RogerParsingNamespace;
-
-  FillRogerNamespaceWithNames(definitionPart, Actions.CurContext, topParsingNs, &topLevelDecls);
-  if (declarationPart) {
-    FillRogerNamespaceWithNames(declarationPart, Actions.CurContext, topParsingNs, &secondaryTopLevelDecls);
-  }
-
-  // Only finish topLevelDecls.
-  SmallVector<DeclGroupRef, 4> UnwappedTopLevelList(topLevelDecls.List.size());
-  for (DeclGroupPtrTy *it = topLevelDecls.List.begin(); it != topLevelDecls.List.end(); ++it) {
-    UnwappedTopLevelList.push_back(it->get());
-  }
-  SmallVector<DeclGroupRef, 4> SecondUnwappedTopLevelList(topLevelDecls.List.size());
-  for (DeclGroupPtrTy *it = secondaryTopLevelDecls.List.begin(); it != secondaryTopLevelDecls.List.end(); ++it) {
-    SecondUnwappedTopLevelList.push_back(it->get());
-  }
-
-  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &UnwappedTopLevelList);
-  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &SecondUnwappedTopLevelList);
-
-  for (size_t i = 0; i < topLevelDecls.List.size(); ++i) {
-    Consumer->HandleTopLevelDecl(topLevelDecls.List[i].get());
-  }
-
-  Actions.ActOnRogerModeFinish();
+  Item *result = List.back();
+  List.pop_back();
+  return result;
 }
 
-static AccessSpecifier calculateASRaw(int explicitVisibility, int defaultVisibility) {
-  int vis = explicitVisibility ? explicitVisibility : defaultVisibility;
-  switch (vis) {
-  default: assert(false && "Unknown visibility");
-  case 0: return AS_none;
-  case 1: return AS_public;
-  case 2: return AS_protected;
-  case 3: return AS_private;
-  }
-}
-
-static AccessSpecifier calculateAS(int explicitVisibility, DeclContext *DC) {
-  int contextVisibility = 0;
-  if (RecordDecl *Rec = dyn_cast<RecordDecl>(DC)) {
-    if (Rec->getTagKind() == TTK_Class) {
-      contextVisibility = 3;
-    } else {
-      contextVisibility = 1;
-    }
-  }
-  return calculateASRaw(explicitVisibility, contextVisibility);
+void Parser::RogerParsingQueue::addAndWrap(LateParsedDeclaration *lateDecl, DeclContext *dc) {
+  Item *item = new Item;
+  item->DC = dc;
+  item->lateDecl = lateDecl;
+  List.push_back(item);
 }
 
 class clang::RogerParseScope {
@@ -534,18 +463,19 @@ public:
 };
 
 class clang::RogerNamespaceParseScope {
-  Parser *P;
+  //Parser *P;
   RogerConstr<RogerParseScope> rogerParseScope;
   bool closed;
 
 public:
   RogerNamespaceParseScope(Parser *PP, DeclContext *DC, Parser::RogerParsingNamespace *parsingNs)
-      : P(PP), closed(false) {
+      : //P(PP),
+        closed(false) {
     new (rogerParseScope.getBuffer()) RogerParseScope(PP, DC);
-    P->RogerNamespaceStack.push(parsingNs);
+    //P->RogerNamespaceStack.push(parsingNs);
   }
   void close() {
-    P->RogerNamespaceStack.pop();
+    //P->RogerNamespaceStack.pop();
     rogerParseScope.del();
     closed = true;
   }
@@ -556,6 +486,111 @@ public:
   }
 };
 
+
+void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
+  if (!Tok.is(tok::kw_capybara)) {
+    return;
+  }
+
+  ConsumeToken();
+
+  CachedTokens DefinitionToks;
+  CachedTokens DeclarationToks;
+
+  ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, DefinitionToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+
+  RogerNamespaceDeclList *declarationPart = 0;
+  if (Tok.is(tok::kw_capybara)) {
+    ConsumeAnyToken();
+
+    ConsumeAndStoreUntil(tok::eof, DeclarationToks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+    declarationPart = ParseRogerPartOverview(DeclarationToks);
+  }
+
+  RogerNamespaceDeclList *definitionPart = ParseRogerPartOverview(DefinitionToks);
+
+  struct MainCallback : Sema::RogerOnDemandParserInt {
+    Parser *parser;
+    RogerCallbackGuard guard;
+    void ParseFunction(LateParsedTemplate &LPT) {
+      guard.check();
+      parser->ParseLateTemplatedFuncDef(LPT);
+    }
+  };
+  MainCallback semaCallback;
+  semaCallback.parser = this;
+
+  RogerTopLevelDecls topLevelDecls;
+  RogerTopLevelDecls secondaryTopLevelDecls;
+
+  RogerParsingQueue parsingQueue;
+  rogerParsingQueue = &parsingQueue;
+
+  Actions.ActOnRogerModeStart(&semaCallback);
+
+  RogerParsingNamespace *topParsingNs = new RogerParsingNamespace;
+
+  FillRogerNamespaceWithNames(definitionPart, Actions.CurContext, topParsingNs, &topLevelDecls);
+  if (declarationPart) {
+    FillRogerNamespaceWithNames(declarationPart, Actions.CurContext, topParsingNs, &secondaryTopLevelDecls);
+  }
+
+  // Only finish topLevelDecls.
+  SmallVector<DeclGroupRef, 4> UnwappedTopLevelList(topLevelDecls.List.size());
+  for (DeclGroupPtrTy *it = topLevelDecls.List.begin(); it != topLevelDecls.List.end(); ++it) {
+    UnwappedTopLevelList.push_back(it->get());
+  }
+  SmallVector<DeclGroupRef, 4> SecondUnwappedTopLevelList(topLevelDecls.List.size());
+  for (DeclGroupPtrTy *it = secondaryTopLevelDecls.List.begin(); it != secondaryTopLevelDecls.List.end(); ++it) {
+    SecondUnwappedTopLevelList.push_back(it->get());
+  }
+
+  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &UnwappedTopLevelList);
+  Actions.ActOnNamespaceFinishRoger(getCurScope()->getEntity(), &SecondUnwappedTopLevelList);
+
+  while (RogerParsingQueue::Item *item = rogerParsingQueue->pop()) {
+    DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+    ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
+    RogerParseScope parseScope(this, item->DC);
+    item->lateDecl->ParseLexedMethodDeclarations();
+    item->lateDecl->ParseLexedMethodDefs();
+    item->lateDecl->ParseRogerLexedStaticInitializers();
+    delete item->lateDecl;
+
+    delete item;
+  }
+
+  for (size_t i = 0; i < topLevelDecls.List.size(); ++i) {
+    Consumer->HandleTopLevelDecl(topLevelDecls.List[i].get());
+  }
+
+  Actions.ActOnRogerModeFinish();
+  rogerParsingQueue = 0;
+}
+
+static AccessSpecifier calculateASRaw(int explicitVisibility, int defaultVisibility) {
+  int vis = explicitVisibility ? explicitVisibility : defaultVisibility;
+  switch (vis) {
+  default: assert(false && "Unknown visibility");
+  case 0: return AS_none;
+  case 1: return AS_public;
+  case 2: return AS_protected;
+  case 3: return AS_private;
+  }
+}
+
+static AccessSpecifier calculateAS(int explicitVisibility, DeclContext *DC) {
+  int contextVisibility = 0;
+  if (RecordDecl *Rec = dyn_cast<RecordDecl>(DC)) {
+    if (Rec->getTagKind() == TTK_Class) {
+      contextVisibility = 3;
+    } else {
+      contextVisibility = 1;
+    }
+  }
+  return calculateASRaw(explicitVisibility, contextVisibility);
+}
 
 template<typename T, T V>
 struct RogerLiteral {
@@ -629,8 +664,8 @@ public:
 void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerTopLevelDecls *topLevelDecs) {
   Sema::RogerLogScope logScope("FillRogerNamespaceWithNames");
   if (NamedDecl *nd = dyn_cast<NamedDecl>(DC)) {
-    nd->printName(llvm::outs());
-    llvm::outs() << '\n';
+    nd->printName(logScope.outs_nl());
+    logScope.outs() << '\n';
   }
 
   struct TypesForRec {
@@ -659,7 +694,7 @@ void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList
       RogerCallbackInUseScope inUse(&isInUse);
       guard.check();
 
-      P->RogerCompleteNamespaceParsing(DC, parsingNs);
+      //P->RogerCompleteNamespaceParsing(DC, parsingNs);
     }
   };
   CompleteParsingCb *cb = new CompleteParsingCb;
@@ -672,8 +707,8 @@ void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList
 
 void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *RD, ParsingClass *parsingClass) {
   Sema::RogerLogScope logScope("FillRogerRecordWithNames");
-  RD->printName(llvm::outs());
-  llvm::outs() << '\n';
+  RD->printName(logScope.outs_nl());
+  logScope.outs() << '\n';
 
 
   struct TypesForNs {
@@ -695,6 +730,9 @@ void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl
     RogerNonType *rogerUsing = rogerClassDecl->Using[i];
 
     RogerNestedTokensState parseNestedTokens(this, &rogerUsing->Toks[rogerUsing->range.begin], rogerUsing->range.size());
+
+    DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+    ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
     AccessSpecifier AS = calculateAS(rogerUsing->visibility, RD);
 
@@ -749,7 +787,7 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
         RogerCallbackInUseScope inUse(&isInUse);
         guard.check();
         DeclGroupPtrTy Result = (parser->*(Types::ParseNamedDeclaration::v))(decl, DC, parsingObj);
-        if (topLevelDecs) {
+        if (topLevelDecs && Result) {
           topLevelDecs->List.push_back(Result);
         }
       }
@@ -833,7 +871,7 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
         RogerCallbackInUseScope inUse(&isInUse);
         guard.check();
         Parser::DeclGroupPtrTy result = parser->ParseRogerTemplatableClassDecl(decl, DC);
-        if (topLevelDecs) {
+        if (topLevelDecs && result) {
           topLevelDecs->List.push_back(result);
         }
       }
@@ -847,8 +885,10 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
     Actions.ActOnNamedDeclarationRoger(nameToken.getIdentifierInfo(), cb);
   }
   for (size_t i = 0; i < rogerDeclList->NonType.size(); ++i) {
-    //ParseRogerNonTypeRegion(rogerDeclList->NonType[i], namespaceVisibility);
-    assert(false);
+    RogerNonType *nonType = rogerDeclList->NonType[i];
+    Token &T = nonType->Toks[nonType->range.begin];
+    Diag(T, diag::err_roger_invalid_non_type_region)
+      << getTokenSimpleSpelling(T.getKind());
   }
   if (SmallVector<RogerNamespace*, 4> *nsDeclList = Types::getNsDeclList(rogerDeclList)) {
     for (size_t i = 0; i < nsDeclList->size(); ++i) {
@@ -898,6 +938,9 @@ Parser::DeclGroupPtrTy Parser::ParseRogerMemberRegion(RogerDeclaration *decl, De
   RogerNestedTokensState parseNestedTokens(this, &decl->Toks[decl->declaration.begin], decl->declaration.size());
   RogerRecordParseScope scope(this, RD, parsingClass);
 
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
   AccessSpecifier AS = calculateAS(decl->visibility, dyn_cast<DeclContext>(RD));
 
   ParsedAttributesWithRange attrs(AttrFactory);
@@ -927,6 +970,9 @@ public:
 Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC) {
   RogerNestedTokensState parseNestedTokens(this, &classDecl->Toks[classDecl->declaration.begin], classDecl->declaration.size());
   RogerParseScope scope(this, DC);
+
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   AccessSpecifier AS = calculateAS(classDecl->visibility, DC);
 
@@ -1151,6 +1197,9 @@ void Parser::PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *clas
 }
 
 void Parser::RogerCompleteCXXMemberSpecificationParsing(RecordDecl *RD, ParsingClass *parsingClass) {
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
   {
     RogerRecordParseScope scope(this, RD, parsingClass);
 
@@ -1166,21 +1215,22 @@ void Parser::RogerCompleteCXXMemberSpecificationParsing(RecordDecl *RD, ParsingC
   DeallocateParsedClasses(parsingClass);
 }
 
-void Parser::RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs) {
-  RogerParseScope scope(this, DC);
-
-  for (size_t i = 0; i < parsingNs->LateParsedDeclarations.size(); ++i) {
-    LateParsedDeclaration *lateDecl = parsingNs->LateParsedDeclarations[i];
-    lateDecl->ParseLexedMethodDeclarations();
-    lateDecl->ParseLexedMethodDefs();
-    lateDecl->ParseRogerLexedStaticInitializers();
-    delete lateDecl;
-  }
-
-  // Implement initializers.
-
-  delete parsingNs;
-}
+//void Parser::RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs) {
+//  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+//  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+//
+//  RogerParseScope scope(this, DC);
+//
+//  for (size_t i = 0; i < parsingNs->LateParsedDeclarations.size(); ++i) {
+//    LateParsedDeclaration *lateDecl = parsingNs->LateParsedDeclarations[i];
+//    lateDecl->ParseLexedMethodDeclarations();
+//    lateDecl->ParseLexedMethodDefs();
+//    lateDecl->ParseRogerLexedStaticInitializers();
+//    delete lateDecl;
+//  }
+//
+//  delete parsingNs;
+//}
 
 struct Parser::LateParsedStaticVarInitializer::Callback : RogerItemizedLateParseCallback {
   CachedTokens Toks;

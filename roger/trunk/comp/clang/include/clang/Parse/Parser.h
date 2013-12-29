@@ -213,6 +213,7 @@ class Parser : public CodeCompletionHandler {
   /// \brief Gathers and cleans up TemplateIdAnnotations when parsing of a
   /// top-level declaration is finished.
   SmallVector<TemplateIdAnnotation *, 16> TemplateIds;
+  bool TemplateIdsBeingCovered;
 
   /// \brief Identifiers which have been declared within a tentative parse.
   SmallVector<IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
@@ -998,14 +999,20 @@ private:
   };
 
   struct RogerParsingNamespace {
+    // Obsolete.
+  };
+
+  class RogerParsingQueue {
     /// LateParsedDeclarations - Method declarations, inline definitions and
     /// nested classes that contain pieces whose parsing will be delayed until
     /// the top-level class is fully defined.
-    LateParsedDeclarationsContainer LateParsedDeclarations;
+  public:
+    void addAndWrap(LateParsedDeclaration *lateDecl, DeclContext *dc);
+    struct Item;
+    Item *pop();
+  private:
+    std::vector<Item*> List;
   };
-
-
-
 
 
   /// \brief The stack of classes that is currently being
@@ -1013,7 +1020,7 @@ private:
   /// when they are parsed, and removed afterward.
   std::stack<ParsingClass *> ClassStack;
 
-  std::stack<RogerParsingNamespace *> RogerNamespaceStack;
+  RogerParsingQueue *rogerParsingQueue;
 
   ParsingClass &getCurrentClass() {
     assert(!ClassStack.empty() && "No lexed method stacks!");
@@ -2332,7 +2339,6 @@ private:
 
   // Roger
 private:
-  bool InRogerMode;
 
   void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerTopLevelDecls *topLevelDecs);
   void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, ParsingClass *parsingClass);
@@ -2350,7 +2356,7 @@ public:
   DeclGroupPtrTy ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, DeclContext *DC, RogerParsingNamespace *parsingNs);
   DeclGroupPtrTy ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, ParsingClass *parsingClass);
   void RogerCompleteCXXMemberSpecificationParsing(RecordDecl *recDecl, ParsingClass *parsingClass);
-  void RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs);
+//  void RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs);
 
   void ParseRogerPartOpt(ASTConsumer *Consumer);
 
@@ -2360,6 +2366,22 @@ public:
   friend class clang::RogerRecordParseScope;
   friend class clang::RogerNamespaceParseScope;
   friend class clang::RogerNestedTokensState;
+
+  class DestroyTemplateIdAnnotationsRAIIObj {
+    SmallVectorImpl<TemplateIdAnnotation *> &Container;
+    size_t prevSize;
+    bool beingCoveredSaved;
+    bool &beingCovered;
+  public:
+    DestroyTemplateIdAnnotationsRAIIObj(SmallVectorImpl<TemplateIdAnnotation *>
+                                       &Container, bool &beingCovered)
+      : Container(Container), prevSize(Container.size()), beingCovered(beingCovered) {
+      beingCoveredSaved = beingCovered;
+      beingCovered = true;
+    }
+
+    ~DestroyTemplateIdAnnotationsRAIIObj();
+  };
 };
 
 }  // end namespace clang

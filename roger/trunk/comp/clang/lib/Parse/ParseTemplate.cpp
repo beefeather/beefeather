@@ -929,7 +929,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
     // later.
     Tok.setKind(tok::annot_template_id);
     TemplateIdAnnotation *TemplateId
-      = TemplateIdAnnotation::Allocate(TemplateArgs.size(), TemplateIds);
+      = TemplateIdAnnotation::Allocate(TemplateArgs.size(), TemplateIds, TemplateIdsBeingCovered);
     TemplateId->TemplateNameLoc = TemplateNameLoc;
     if (TemplateName.getKind() == UnqualifiedId::IK_Identifier) {
       TemplateId->Name = TemplateName.Identifier;
