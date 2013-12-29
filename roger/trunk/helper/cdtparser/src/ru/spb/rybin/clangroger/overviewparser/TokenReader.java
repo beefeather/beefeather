@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.eclipse.cdt.core.model.ILexedContent;
 import org.eclipse.cdt.core.parser.IToken;
+import org.eclipse.cdt.internal.core.parser.scanner.TokenUtil;
 
 class TokenReader {
 	private final InputStream in;
@@ -24,6 +25,15 @@ class TokenReader {
 		TokenAdapter(int cdtKind, String text) {
 			this.cdtKind = cdtKind;
 			this.text = text;
+		}
+		
+		@Override
+		public String toString() {
+			if (text == null) {
+				return new String(TokenUtil.getImage(cdtKind));
+			} else {
+				return text;
+			}
 		}
 	}
 	
@@ -75,6 +85,9 @@ class TokenReader {
 					}
 					cdtKind = kindObj;
 				}
+			} else if (kind.getId().equals("__null")) {
+				cdtKind = IToken.tIDENTIFIER;
+				s = "NULL";
 			} else {
 				s = null;
 				Integer kindObj = MAPPING_TABLE.simple.get(kind.getId());
@@ -83,7 +96,9 @@ class TokenReader {
 				}
 				cdtKind = kindObj;
 			}
-			result.add(new TokenAdapter(cdtKind, s));
+			TokenAdapter tokenAdapter = new TokenAdapter(cdtKind, s);
+			//System.out.print(tokenAdapter + " ");
+			result.add(tokenAdapter);
 		}
 		result.add(new TokenAdapter(IToken.tEND_OF_INPUT, null));
 		
