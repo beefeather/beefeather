@@ -139,7 +139,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
 
   LexedMethod* LM = new LexedMethod(this, FnD);
   if (Actions.IsInRogerMode()) {
-    rogerParsingQueue->addAndWrap(LM, FnD->getDeclContext());
+    rogerParsingQueue->addAndWrap(LM, Actions.getContainingDC(cast<DeclContext>(FnD)));
   } else {
     getCurrentClass().LateParsedDeclarations.push_back(LM);
   }

@@ -859,6 +859,8 @@ def err_roger_invalid_token_before_region_end : Error<
   "invalid extra '%0' at end of declaration (Roger mode)">;
 def err_roger_invalid_non_type_region : Error<
   "unrecognized (non-type) part: '%0' (Roger mode)">;
+def err_roger_invalid_region : Error<
+  "unrecognized part <%0> (Roger overview parser)">;
 
 
 } // end of Parser diagnostics

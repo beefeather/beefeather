@@ -1648,6 +1648,7 @@ public:
     DeclarationName name;
     RogerItemizedLateParseCallback *callback;
     bool beingCompiled;
+    bool isTemplateSpec;
     UnparsedNamedDecl() : beingCompiled(false) {}
   };
 

@@ -54,14 +54,12 @@ struct RogerDeclaration {
   CachedTokens &Toks;
   int visibility;
   enum NameKind {
-    NAME_PLAIN, NAME_OPERATOR, NAME_ARRAY_OPERATOR, NAME_CONVERSION, NAME_CONSTRUCTOR, NAME_DESTRUCTOR, _NAME_ERROR
+    NAME_PLAIN, NAME_OPERATOR, NAME_ARRAY_OPERATOR, NAME_CONVERSION, NAME_CONSTRUCTOR, NAME_DESTRUCTOR, NAME_INSTANTIATION, _NAME_ERROR
   };
   NameKind nameKind;
   int nameToken;
-  bool isType;
   RogerRange declaration;
-  //RogerRange declarator;
-  //int declaratorNumber;
+  bool isTemplateSecondary;
 };
 
 struct RogerClassDecl {
@@ -70,9 +68,9 @@ struct RogerClassDecl {
   int visibility;
   int nameToken;
   int tagToken;
-  bool isTemplate;
   RogerRange declaration;
   RogerRange classTokens;
+  bool isTemplateSecondary;
   RogerDeclList inner;
   SmallVector<RogerNonType*, 1> Using;
 };
@@ -92,9 +90,10 @@ class RogerOverviewFileParser {
 private:
   const unsigned char *m_current;
   const unsigned char *m_end;
+  Parser *P;
   CachedTokens &Toks;
 public:
-  RogerOverviewFileParser(llvm::MemoryBuffer& buffer, CachedTokens &T) : Toks(T) {
+  RogerOverviewFileParser(llvm::MemoryBuffer& buffer, CachedTokens &T, Parser *P) : P(P), Toks(T) {
     m_current = reinterpret_cast<const unsigned char *>(buffer.getBufferStart());
     m_end = reinterpret_cast<const unsigned char *>(buffer.getBufferEnd());
   }
@@ -142,6 +141,9 @@ private:
       assert(classDecl && "Using must be in class");
       parseUsing(classDecl);
       break;
+    case 7:
+      parseErrorRegion();
+      break;
     default:
       assert(false && "Unknown code");
     }
@@ -155,14 +157,14 @@ private:
   void parseDeclaration(RogerDeclList* list) {
     RogerDeclaration *declaration = new RogerDeclaration(Toks);
     declaration->visibility = takeByte();
-    declaration->isType = takeByte();
     declaration->nameToken = takeInt16();
-    declaration->nameKind = RogerDeclaration::NAME_PLAIN;
+    if (declaration->nameToken == 0) {
+      declaration->nameKind = RogerDeclaration::NAME_INSTANTIATION;
+    } else {
+      declaration->nameKind = RogerDeclaration::NAME_PLAIN;
+    }
     parseRange(declaration->declaration);
-    RogerRange declaratorRangeIgnore;
-    parseRange(declaratorRangeIgnore);
-    int declaratorNumber = takeInt16();
-    assert(declaratorNumber == 0);
+    declaration->isTemplateSecondary = takeByte();
     list->NameDeclaration.push_back(declaration);
   }
   void parseClassDecl(RogerDeclList* list) {
@@ -171,6 +173,7 @@ private:
     classDecl->nameToken = takeInt16();
     parseRange(classDecl->declaration);
     parseRange(classDecl->classTokens);
+    classDecl->isTemplateSecondary = takeByte();
     while (true) {
       assert(m_current < m_end);
       if (*m_current == 0) {
@@ -183,7 +186,6 @@ private:
   }
   void parseFunction(RogerDeclList* list) {
     RogerDeclaration *declaration = new RogerDeclaration(Toks);
-    declaration->isType = false;
     declaration->visibility = takeByte();
     int nameKind = takeByte();
     switch (nameKind) {
@@ -215,6 +217,7 @@ private:
       assert(false && "Unknown name code");
     }
     parseRange(declaration->declaration);
+    declaration->isTemplateSecondary = takeByte();
     list->NameDeclaration.push_back(declaration);
   }
   void parseNamespace(RogerNamespaceDeclList* list) {
@@ -236,6 +239,16 @@ private:
     nonType->visibility = takeByte();
     parseRange(nonType->range);
     classDecl->Using.push_back(nonType);
+  }
+
+  void parseErrorRegion() {
+    RogerRange range;
+    parseRange(range);
+    int len = takeInt16();
+    assert(m_current + len <= m_end);
+    StringRef message(reinterpret_cast<const char *>(m_current), len);
+    m_current += len;
+    P->Diag(Toks[range.begin], diag::err_roger_invalid_region) << message;
   }
 
   void parseRange(RogerRange &range) {
@@ -322,7 +335,7 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
     bool res = llvm::MemoryBuffer::getFile(overviewFileName, File);
     assert(!res && "Cannot read file");
 
-    RogerOverviewFileParser parser(*File.get(), Toks);
+    RogerOverviewFileParser parser(*File.get(), Toks, this);
 
     return parser.parse();
   }
@@ -359,7 +372,7 @@ class clang::RogerParseScope {
 
   bool closed;
 public:
-  RogerParseScope(Parser *PP, DeclContext *context)
+  RogerParseScope(Parser *PP, DeclContext *context, CXXRecordDecl *AdditionalTemplateHolder = 0)
       : P(PP), Actions(PP->Actions), closed(false)
   {
     // Track template parameter depth.
@@ -404,6 +417,16 @@ public:
       }
       TemplateParamScopeStack.push_back(new Parser::ParseScope(P, Scope::DeclScope));
       Actions.PushDeclContext(Actions.getCurScope(), *II);
+    }
+    if (AdditionalTemplateHolder) {
+      bool IsClassTemplate = AdditionalTemplateHolder->getDescribedClassTemplate() != 0;
+      TemplateParamScopeStack.push_back(
+          new Parser::ParseScope(P, Scope::TemplateParamScope,
+                        /*ManageScope*/IsClassTemplate));
+      Actions.ActOnReenterTemplateScope(P->getCurScope(),
+          AdditionalTemplateHolder->getDescribedClassTemplate());
+      if (IsClassTemplate)
+        ++CurTemplateDepthTracker.get();
     }
   }
 
@@ -804,7 +827,7 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
     case RogerDeclaration::NAME_PLAIN: {
       Token &nameToken = decl->Toks[decl->nameToken];
       DeclarationName Name(nameToken.getIdentifierInfo());
-      Actions.ActOnNamedDeclarationRoger(Name, cb);
+      Actions.ActOnNamedDeclarationRoger(Name, decl->isTemplateSecondary, cb);
       break;
     }
     case RogerDeclaration::NAME_ARRAY_OPERATOR:
@@ -836,18 +859,23 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
         assert(false && "Unknown operator");
       }
       DeclarationName Name = Actions.Context.DeclarationNames.getCXXOperatorName(operatorKind);
-      Actions.ActOnNamedDeclarationRoger(Name, cb);
+      Actions.ActOnNamedDeclarationRoger(Name, decl->isTemplateSecondary, cb);
       break;
     }
     case RogerDeclaration::NAME_CONVERSION:
-      Actions.ActOnConversionDeclarationRoger(cb);
+      Actions.ActOnConversionDeclarationRoger(decl->isTemplateSecondary, cb);
       break;
     case RogerDeclaration::NAME_CONSTRUCTOR:
-      Actions.ActOnConstructorDeclarationRoger(cb);
+      Actions.ActOnConstructorDeclarationRoger(decl->isTemplateSecondary, cb);
       break;
     case RogerDeclaration::NAME_DESTRUCTOR:
       Actions.ActOnDestructorDeclarationRoger(cb);
       break;
+    case RogerDeclaration::NAME_INSTANTIATION: {
+      DeclarationName Name;
+      Actions.ActOnNamedDeclarationRoger(Name, decl->isTemplateSecondary, cb);
+      break;
+    }
     default:
       assert(false);
     }
@@ -882,7 +910,7 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
     cb->decl = decl;
     cb->DC = Actions.CurContext;
     cb->topLevelDecs = topLevelDecs;
-    Actions.ActOnNamedDeclarationRoger(nameToken.getIdentifierInfo(), cb);
+    Actions.ActOnNamedDeclarationRoger(nameToken.getIdentifierInfo(), decl->isTemplateSecondary, cb);
   }
   for (size_t i = 0; i < rogerDeclList->NonType.size(); ++i) {
     RogerNonType *nonType = rogerDeclList->NonType[i];
@@ -977,6 +1005,7 @@ Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *cl
   AccessSpecifier AS = calculateAS(classDecl->visibility, DC);
 
   Decl *resultDecl;
+  bool typeSpecError = false;
 
   if (Tok.is(tok::kw_template)) {
     assert((Tok.is(tok::kw_export) || Tok.is(tok::kw_template)) &&
@@ -1063,11 +1092,13 @@ Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *cl
 
     resultDecl = ParseRogerClassForwardDecl(classDecl,
         ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
-                    AS, parseNestedTokens);
+                    AS, parseNestedTokens, typeSpecError);
   } else {
     ParsingDeclSpec DS(*this);
-    resultDecl = ParseRogerClassForwardDecl(classDecl, ParsedTemplateInfo(), AS, parseNestedTokens);
+    resultDecl = ParseRogerClassForwardDecl(classDecl, ParsedTemplateInfo(), AS, parseNestedTokens, typeSpecError);
   }
+
+  // Should we handle typeSpecError?
 
   // Keep position for the future parsing.
   parseNestedTokens.skipRest();
@@ -1077,7 +1108,7 @@ Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *cl
 
 Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
     const ParsedTemplateInfo &TemplateInfo,
-    AccessSpecifier AS, RogerNestedTokensState &parseState) {
+    AccessSpecifier AS, RogerNestedTokensState &parseState, bool &typeSpecError) {
   // Assumption.
   tok::TokenKind TagTokKind = Tok.getKind();
   DeclSpec::TST TagType;
@@ -1091,35 +1122,234 @@ Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
     assert(TagTokKind == tok::kw_union && "Not a class specifier");
     TagType = DeclSpec::TST_union;
   }
+  SourceLocation KwLoc = Tok.getLocation();
+
   ConsumeToken();
 
-  assert(Tok.is(tok::identifier));
-  IdentifierInfo *Name = Tok.getIdentifierInfo();
-  SourceLocation NameLoc = ConsumeToken();
 
-  CXXScopeSpec emptyScopeSpec;
+
+  // What is that?
+  bool EnteringContext = true; //(DSContext == DSC_class || DSContext == DSC_top_level);
+
+  // Parse the (optional) nested-name-specifier.
+  //CXXScopeSpec &SS = DS.getTypeSpecScope();
+  CXXScopeSpec SS;
+  if (getLangOpts().CPlusPlus) {
+    // "FOO : BAR" is not a potential typo for "FOO::BAR".
+    ColonProtectionRAIIObject X(*this);
+
+    if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext)) {
+      // DS.SetTypeSpecError();
+      typeSpecError = true;
+    }
+    if (SS.isSet())
+      if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id))
+        Diag(Tok, diag::err_expected_ident);
+  }
+
+  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+
+  // Parse the (optional) class name or simple-template-id.
+  IdentifierInfo *Name = 0;
+  SourceLocation NameLoc;
+  TemplateIdAnnotation *TemplateId = 0;
+  if (Tok.is(tok::identifier)) {
+    Name = Tok.getIdentifierInfo();
+    NameLoc = ConsumeToken();
+
+    if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
+      // The name was supposed to refer to a template, but didn't.
+      // Eat the template argument list and try to continue parsing this as
+      // a class (or template thereof).
+      TemplateArgList TemplateArgs;
+      SourceLocation LAngleLoc, RAngleLoc;
+      if (ParseTemplateIdAfterTemplateName(TemplateTy(), NameLoc, SS,
+                                           true, LAngleLoc,
+                                           TemplateArgs, RAngleLoc)) {
+        // We couldn't parse the template argument list at all, so don't
+        // try to give any location information for the list.
+        LAngleLoc = RAngleLoc = SourceLocation();
+      }
+
+      Diag(NameLoc, diag::err_explicit_spec_non_template)
+        << (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+        << (TagType == DeclSpec::TST_class? 0
+            : TagType == DeclSpec::TST_struct? 1
+            : TagType == DeclSpec::TST_interface? 2
+            : 3)
+        << Name
+        << SourceRange(LAngleLoc, RAngleLoc);
+
+      // Strip off the last template parameter list if it was empty, since
+      // we've removed its template argument list.
+      if (TemplateParams && TemplateInfo.LastParameterListWasEmpty) {
+        if (TemplateParams && TemplateParams->size() > 1) {
+          TemplateParams->pop_back();
+        } else {
+          TemplateParams = 0;
+          const_cast<ParsedTemplateInfo&>(TemplateInfo).Kind
+            = ParsedTemplateInfo::NonTemplate;
+        }
+      } else if (TemplateInfo.Kind
+                                == ParsedTemplateInfo::ExplicitInstantiation) {
+        // Pretend this is just a forward declaration.
+        TemplateParams = 0;
+        const_cast<ParsedTemplateInfo&>(TemplateInfo).Kind
+          = ParsedTemplateInfo::NonTemplate;
+        const_cast<ParsedTemplateInfo&>(TemplateInfo).TemplateLoc
+          = SourceLocation();
+        const_cast<ParsedTemplateInfo&>(TemplateInfo).ExternLoc
+          = SourceLocation();
+      }
+    }
+  } else if (Tok.is(tok::annot_template_id)) {
+    TemplateId = takeTemplateIdAnnotation(Tok);
+    NameLoc = ConsumeToken();
+
+    if (TemplateId->Kind != TNK_Type_template &&
+        TemplateId->Kind != TNK_Dependent_template_name) {
+      // The template-name in the simple-template-id refers to
+      // something other than a class template. Give an appropriate
+      // error message and skip to the ';'.
+      SourceRange Range(NameLoc);
+      if (SS.isNotEmpty())
+        Range.setBegin(SS.getBeginLoc());
+
+      Diag(TemplateId->LAngleLoc, diag::err_template_spec_syntax_non_template)
+        << TemplateId->Name << static_cast<int>(TemplateId->Kind) << Range;
+
+      //DS.SetTypeSpecError();
+      typeSpecError = true;
+      SkipUntil(tok::semi, false, true);
+      return 0;
+    }
+  }
+
+
+  // Create the tag portion of the class or class template.
+  DeclResult TagOrTempResult = true; // invalid
+  //TypeResult TypeResult = true; // invalid
+
+  bool Owned = false;
+
   ParsedAttributesWithRange attrs(AttrFactory);
 
-  MultiTemplateParamsArg TParams;
-  if (TemplateInfo.TemplateParams)
-    TParams =
-      MultiTemplateParamsArg(&(*TemplateInfo.TemplateParams)[0], TemplateInfo.TemplateParams->size());
+
+  if (TemplateId) {
+    ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                       TemplateId->NumArgs);
+    // Explicit specialization, class template partial specialization,
+    // or explicit instantiation.
+    {
+      // This is an explicit specialization or a class template
+      // partial specialization.
+      TemplateParameterLists FakedParamLists;
+      if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+        // This looks like an explicit instantiation, because we have
+        // something like
+        //
+        //   template class Foo<X>
+        //
+        // but it actually has a definition. Most likely, this was
+        // meant to be an explicit specialization, but the user forgot
+        // the '<>' after 'template'.
+        // It this is friend declaration however, since it cannot have a
+        // template header, it is most likely that the user meant to
+        // remove the 'template' keyword.
+//        assert((TUK == Sema::TUK_Definition || TUK == Sema::TUK_Friend) &&
+//               "Expected a definition here");
+
+        {
+          SourceLocation LAngleLoc
+            = PP.getLocForEndOfToken(TemplateInfo.TemplateLoc);
+          Diag(TemplateId->TemplateNameLoc,
+               diag::err_explicit_instantiation_with_definition)
+            << SourceRange(TemplateInfo.TemplateLoc)
+            << FixItHint::CreateInsertion(LAngleLoc, "<>");
+
+          // Create a fake template parameter list that contains only
+          // "template<>", so that we treat this construct as a class
+          // template specialization.
+          FakedParamLists.push_back(
+            Actions.ActOnTemplateParameterList(0, SourceLocation(),
+                                               TemplateInfo.TemplateLoc,
+                                               LAngleLoc,
+                                               0, 0,
+                                               LAngleLoc));
+          TemplateParams = &FakedParamLists;
+        }
+      }
+
+      // Build the class template specialization.
+      TagOrTempResult
+        = Actions.ActOnClassTemplateSpecialization(getCurScope(), TagType, Sema::TUK_Definition,
+            KwLoc, SourceLocation(), SS,
+                       TemplateId->Template,
+                       TemplateId->TemplateNameLoc,
+                       TemplateId->LAngleLoc,
+                       TemplateArgsPtr,
+                       TemplateId->RAngleLoc,
+                       attrs.getList(),
+                       MultiTemplateParamsArg(
+                                    TemplateParams? &(*TemplateParams)[0] : 0,
+                                 TemplateParams? TemplateParams->size() : 0));
+    }
+  } else {
+    if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+      // If the declarator-id is not a template-id, issue a diagnostic and
+      // recover by ignoring the 'template' keyword.
+      Diag(Tok, diag::err_template_defn_explicit_instantiation)
+        << 1 << FixItHint::CreateRemoval(TemplateInfo.TemplateLoc);
+      TemplateParams = 0;
+    }
+
+    bool IsDependent = false;
+
+    // Don't pass down template parameter lists if this is just a tag
+    // reference.  For example, we don't need the template parameters here:
+    //   template <class T> class A *makeA(T t);
+    MultiTemplateParamsArg TParams;
+    if (TemplateParams)
+      TParams =
+        MultiTemplateParamsArg(&(*TemplateParams)[0], TemplateParams->size());
+
+    // Declaration or definition of a class type
+    TagOrTempResult = Actions.ActOnTag(getCurScope(), TagType, Sema::TUK_Definition, KwLoc,
+        SS, Name, NameLoc, attrs.getList(), AS,
+                                       /*ModulePrivateSpecLoc=*/ SourceLocation(),
+                                       TParams, Owned, IsDependent,
+                                       SourceLocation(), false,
+                                       clang::TypeResult());
 
 
-  bool OwnedDecl;
-  bool IsDependent = false;
-  Decl *TagOrTempResult = Actions.ActOnTag(getCurScope(), TagType, Sema::TUK_Definition, SourceLocation(),
-      emptyScopeSpec, Name, NameLoc, attrs.getList(), AS,
-                                     /*ModulePrivateSpecLoc=*/ SourceLocation(),
-                                     TParams, OwnedDecl, IsDependent,
-                                     SourceLocation(), false,
-                                     clang::TypeResult());
-  assert(!IsDependent && "Don't understand");
-  if (!TagOrTempResult) {
+    // If ActOnTag said the type was dependent, try again with the
+    // less common call.
+    if (IsDependent) {
+      assert(false);
+    }
+  }
+
+  //  assert(Tok.is(tok::identifier));
+//  IdentifierInfo *Name = Tok.getIdentifierInfo();
+//  SourceLocation NameLoc = ConsumeToken();
+//
+//  CXXScopeSpec emptyScopeSpec;
+//  ParsedAttributesWithRange attrs(AttrFactory);
+//
+//  MultiTemplateParamsArg TParams;
+//  if (TemplateInfo.TemplateParams)
+//    TParams =
+//      MultiTemplateParamsArg(&(*TemplateInfo.TemplateParams)[0], TemplateInfo.TemplateParams->size());
+
+
+//  bool OwnedDecl;
+//  bool IsDependent = false;
+//  assert(!IsDependent && "Don't understand");
+  if (TagOrTempResult.isInvalid()) {
     return 0;
   }
 
-  Decl *ResultDecl = TagOrTempResult;
+  Decl *ResultDecl = TagOrTempResult.get();
   Actions.AdjustDeclIfTemplate(ResultDecl);
   CXXRecordDecl *recDecl = cast<CXXRecordDecl>(ResultDecl);
 
@@ -1130,13 +1360,13 @@ Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
   RogerRecordPreparser *lateParser = new RogerRecordPreparser(*this, recDecl, classDecl, parseState.getPos());
   recDecl->rogerState->parseHeader = lateParser;
 
-  return TagOrTempResult;
+  return TagOrTempResult.get();
 }
 
 
 void Parser::PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *classDecl, int tokenOffset) {
   RogerNestedTokensState parseNestedTokens(this, &classDecl->Toks[classDecl->declaration.begin] + tokenOffset, classDecl->declaration.size() - tokenOffset);
-  RogerParseScope scope(this, recDecl->getDeclContext());
+  RogerParseScope scope(this, recDecl->getDeclContext(), recDecl);
 
 
   // Quick hack.

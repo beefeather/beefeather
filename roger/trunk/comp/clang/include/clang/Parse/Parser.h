@@ -2348,7 +2348,7 @@ private:
   DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC);
   Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
       const ParsedTemplateInfo &TemplateInfo,
-      AccessSpecifier AS, RogerNestedTokensState &parseState);
+      AccessSpecifier AS, RogerNestedTokensState &parseState, bool &typeSpecError);
   RogerNamespaceDeclList* ParseRogerPartOverview(CachedTokens &Toks);
 
 public:

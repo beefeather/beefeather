@@ -1035,9 +1035,9 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       if (skipBecauseTemplate) {
         Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
       } else {
-        LexedMethod* LM = new LexedMethod(this, FnD);
-        rogerParsingQueue->addAndWrap(LM, FnD->getDeclContext());
-        LM->TemplateScope = false;
+        LexedMethod* LM = new LexedMethod(this, DP);
+        rogerParsingQueue->addAndWrap(LM, Actions.getContainingDC(cast<DeclContext>(DP)));
+        LM->TemplateScope = TemplateInfo.Kind == ParsedTemplateInfo::Template;
         LM->Toks.swap(Toks);
       }
       //FnD->RogerPlannedForLateParsing = !skipBecauseTemplate;

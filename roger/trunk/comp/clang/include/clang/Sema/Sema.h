@@ -7570,9 +7570,9 @@ public:
                                    Expr *SubExpr);
 
   // Roger
-  void ActOnNamedDeclarationRoger(DeclarationName Name, RogerItemizedLateParseCallback *callback);
-  void ActOnConversionDeclarationRoger(RogerItemizedLateParseCallback *callback);
-  void ActOnConstructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
+  void ActOnNamedDeclarationRoger(DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnConversionDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnConstructorDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
   void ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
   void ActOnNamespaceFinishRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
   void CompleteDeclContextRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
@@ -7592,6 +7592,7 @@ public:
       AttributeList *AttrList);
 
   void RogerDefineRecord(CXXRecordDecl *decl);
+  void RogerDefineFunction(const FunctionDecl *FunDecl);
   // Return true if roger thinks that enough has been done.
   bool RequireCompleteTypeRoger(QualType T, RogerRequireCompleteReason RogerOnlyInheritance);
   bool RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReason RogerOnlyInheritance);

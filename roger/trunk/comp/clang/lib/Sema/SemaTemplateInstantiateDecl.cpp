@@ -3120,6 +3120,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   assert(PatternDecl && "instantiating a non-template");
 
   Stmt *Pattern = PatternDecl->getBody(PatternDecl);
+
+  if (!Pattern) {
+    RogerDefineFunction(PatternDecl);
+    Pattern = PatternDecl->getBody(PatternDecl);
+  }
+
   assert(PatternDecl && "template definition is not a template");
   if (!Pattern) {
     // Try to find a defaulted definition
