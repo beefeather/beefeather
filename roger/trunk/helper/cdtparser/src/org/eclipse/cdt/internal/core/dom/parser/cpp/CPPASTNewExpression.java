@@ -41,7 +41,8 @@ import org.eclipse.cdt.internal.core.dom.parser.c.CASTExpressionList;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPSemantics;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalFixed;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 
 public class CPPASTNewExpression extends ASTNode implements ICPPASTNewExpression, IASTAmbiguityParent {

@@ -21,7 +21,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateArgument;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalFixed;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalParameterPack;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalTypeId;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Implementation of non-type template argument, used by AST and index.

@@ -88,6 +88,9 @@ class TokenReader {
 			} else if (kind.getId().equals("__null")) {
 				cdtKind = IToken.tIDENTIFIER;
 				s = "NULL";
+			} else if (MAPPING_TABLE.simpleToImage.containsKey(kind.getId())) {
+				s = MAPPING_TABLE.simpleToImage.get(kind.getId());
+				cdtKind = IToken.tIDENTIFIER;
 			} else {
 				s = null;
 				Integer kindObj = MAPPING_TABLE.simple.get(kind.getId());
@@ -124,10 +127,15 @@ class TokenReader {
 	private static class MappingTable {
 		
 		Map<String, Integer> simple = new HashMap<String, Integer>();
+		Map<String, String> simpleToImage = new HashMap<String, String>();
 		Map<String, Integer> textual = new HashMap<String, Integer>();
 		
 		void add(String clangId, int cdtId) {
 			simple.put(clangId, cdtId);
+		}
+		
+		void addToImage(String clangId, String image) {
+			simpleToImage.put(clangId, image);
 		}
 		
 		void addTextual(String clangId, int cdtId) {
@@ -302,9 +310,9 @@ class TokenReader {
 //			add("_Decimal32", IToken.t);
 //			add("_Decimal64", IToken.t);
 //			add("_Decimal128", IToken.t);
-//			add("__null", IToken.t);
+			addToImage("__null", "NULL");
 //			add("__alignof", IToken.t);
-//			add("__attribute", IToken.t);
+			addToImage("__attribute", "__attribute__");
 //			add("__builtin_choose_expr", IToken.t);
 //			add("__builtin_offsetof", IToken.t);
 //			add("__builtin_types_compatible_p", IToken.t);

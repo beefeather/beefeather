@@ -34,8 +34,12 @@ class OverviewWriter {
 		private void writeErrorFile(ErrorFile errorFile) {
 			writeByte((byte) 1); 
 			String message = errorFile.message();
-			writeInt16(message.length());
-			writeBytes(message.getBytes());
+			writeString(message);
+		}
+		private void writeString(String s) {
+			byte[] bb = s.getBytes();
+			writeInt16(bb.length);
+			writeBytes(bb);
 		}
 		private void writeRegion(Region r) {
 			r.accept(new Region.Visitor<Void>() {
@@ -74,6 +78,11 @@ class OverviewWriter {
 					writeUsing(usingRegion);
 					return null;
 				}
+				@Override
+				public Void visitError(ErrorRegion errorRegion) {
+					writeError(errorRegion);
+					return null;
+				}
 			});
 		}
 		private void writeNonType(NonTypeRegion nonTypeRegion) {
@@ -84,11 +93,19 @@ class OverviewWriter {
 		private void writeDeclaration(DeclarationRegion declarationRegion) {
 			writeByte((byte) 2);
 			writeVisibility(declarationRegion.visibility());
-			writeByte((byte) (declarationRegion.isType() ? 1 : 0));
-			writeInt16(declarationRegion.nameToken());
+			Integer namePos = declarationRegion.nameToken();
+			int codedNamePos;
+			if (namePos == null) {
+				codedNamePos = 0;
+			} else {
+				codedNamePos = namePos;
+				if (codedNamePos == 0) {
+					throw new RuntimeException("Unsupported code for name position");
+				}
+			}
+			writeInt16(codedNamePos);
 			writeRange(declarationRegion.declaration());
-			writeRange(declarationRegion.declarator());
-			writeInt16(declarationRegion.declaratorNumber());
+			writeByte((byte)(declarationRegion.isTemplateSecondary() ? 1 : 0));
 		}
 		private void writeClass(ClassRegion classRegion) {
 			writeByte((byte) 3);
@@ -96,6 +113,7 @@ class OverviewWriter {
 			writeInt16(classRegion.nameToken());
 			writeRange(classRegion.declaration());
 			writeRange(classRegion.classTokens());
+			writeBool(classRegion.isTemplateSecondary());
 			
 			for (Region r : classRegion.innerRegions()) {
 				writeRegion(r);
@@ -140,6 +158,7 @@ class OverviewWriter {
 				}
 			});
 			writeRange(functionRegion.declaration());
+			writeByte((byte)(functionRegion.isTemplateSecondary() ? 1 : 0));
 		}
 		private void writeNamespace(NamespaceRegion namespaceRegion) {
 			writeByte((byte) 5);
@@ -155,6 +174,12 @@ class OverviewWriter {
 			writeVisibility(usingRegion.visibility());
 			writeRange(usingRegion.declaration());
 		}
+
+		private void writeError(ErrorRegion errorRegion) {
+			writeByte((byte) 7);
+			writeRange(errorRegion.declaration());
+			writeString(errorRegion.errorMessage());
+		}
 		
 		private void writeVisibility(Integer visibility) {
 			int code = visibility == null ? 0 : visibility.intValue();
@@ -166,6 +191,9 @@ class OverviewWriter {
 		}
 		
 		private void writeInt16(int n) {
+			if (n < 0) {
+				throw new RuntimeException("Too small: " + n);
+			}
 			if (n > 0xFFFF) {
 				throw new RuntimeException("Too big: " + n);
 			}
@@ -180,6 +208,9 @@ class OverviewWriter {
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
+		}
+		private void writeBool(boolean b) {
+			writeByte((byte)(b ? 1 : 0));
 		}
 		private void writeBytes(byte[] bytes) {
 			try {
@@ -217,6 +248,7 @@ class OverviewWriter {
           T visitFunction(FunctionRegion functionRegion);
           T visitNamespace(NamespaceRegion namespaceRegion);
           T visitUsing(UsingRegion usingRegion);
+          T visitError(ErrorRegion errorRegion);
 	  }
   }
   
@@ -227,17 +259,17 @@ class OverviewWriter {
   
   interface DeclarationRegion extends Region {
 	  Integer visibility();
-	  boolean isType();
-	  int nameToken();
+	  // null means unnamed, means template instantiation.
+	  Integer nameToken();
 	  TokenRange declaration();
-	  TokenRange declarator();
-	  int declaratorNumber();
+	  boolean isTemplateSecondary();
   }
   
   interface FunctionRegion extends Region {
 	  Integer visibility();
 	  DeclarationName name();
 	  TokenRange declaration();
+	  boolean isTemplateSecondary();
   }
 
   interface ClassRegion extends Region {
@@ -247,6 +279,7 @@ class OverviewWriter {
 	  TokenRange declaration();
 	  TokenRange classTokens();
 	  List<? extends Region> innerRegions();
+	  boolean isTemplateSecondary();
   }
   
   interface NamespaceRegion extends Region {
@@ -257,6 +290,31 @@ class OverviewWriter {
   interface UsingRegion extends Region {
 	  Integer visibility();
 	  TokenRange declaration();
+  }
+  
+  interface ErrorRegion extends Region {
+	  TokenRange declaration();
+	  String errorMessage();
+	  
+	  class Impl implements ErrorRegion {
+		private final String message;
+		private final TokenRange range;
+		
+		public Impl(String message, TokenRange range) {
+			this.message = message;
+			this.range = range;
+		}
+		
+		@Override public <T> T accept(Visitor<T> visitor) {
+			return visitor.visitError(this);
+		}
+		@Override public TokenRange declaration() {
+			return range;
+		}
+		@Override public String errorMessage() {
+			return message;
+		}
+	  }
   }
 
   interface DeclarationName {

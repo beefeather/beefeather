@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.cdt.core.dom.ast.ExpansionOverlapsBoundaryException;
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
@@ -26,9 +25,12 @@ import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConversionName;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExplicitTemplateInstantiation;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceDefinition;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTOperatorName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateDeclaration;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateId;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateSpecialization;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
@@ -42,9 +44,6 @@ import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.cdt.internal.core.parser.EmptyFilesProvider;
 
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.*;
-import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.Region.Visitor;
-import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.TokenRange;
-import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.UsingRegion;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class Main {
@@ -168,7 +167,7 @@ public class Main {
 					other = false;
 				} else if (d instanceof IASTFunctionDefinition) {
 					IASTFunctionDefinition functionDef = (IASTFunctionDefinition) d;
-					FunctionRegion region = dumpFunctionDefinition(functionDef, currentVisibility, printer);
+					FunctionRegion region = dumpFunctionDefinition(functionDef, functionDef, currentVisibility, false, false, printer);
 					regions.add(region);
 					other = false;
 				} else if (d instanceof ICPPASTUsingDeclaration) {
@@ -210,9 +209,15 @@ public class Main {
 		return regions;
 	}
 	
-	private static FunctionRegion dumpFunctionDefinition(final IASTFunctionDefinition functionDef, final Integer currentVisibility, Printer printer) {
+	private static FunctionRegion dumpFunctionDefinition(final IASTFunctionDefinition functionDef, final IASTDeclaration fullDecl, final Integer currentVisibility,
+			boolean isTemplate, final boolean isTemplateSpecialization, Printer printer) {
 		IASTFunctionDeclarator declarator = functionDef.getDeclarator();
-		final IASTName name = declarator.getName();
+		IASTName name = declarator.getName();
+		if (isTemplateSpecialization) {
+  		  ICPPASTTemplateId templateId = (ICPPASTTemplateId) name;
+  		  name = templateId.getTemplateName();
+		}
+		final IASTName nameFinal = name;
 		if (name.isQualified()) {
 			throw new RuntimeException("Unexpected qualified name");
 		}
@@ -273,13 +278,14 @@ public class Main {
 					}
 					@Override
 					public int token() {
-						return createSingleTokenPosition(name);
+						return createSingleTokenPosition(nameFinal);
 					}
 				};
 			}
 		}
 		
-		printer.println("<function name=" + name.toString() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " declaration=" + getLocationString(functionDef));
+		printer.println("<function name=" + name.toString() + " isTemplate=" + isTemplate + " isSpecialization=" + isTemplateSpecialization +
+				" visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " fullDeclaration=" + getLocationString(fullDecl));
 		return new FunctionRegion() {
 			@Override public <T> T accept(Visitor<T> visitor) {
 				return visitor.visitFunction(this);
@@ -291,7 +297,10 @@ public class Main {
 				return declarationName;
 			}
 			@Override public TokenRange declaration() {
-				return createRange(functionDef);
+				return createRange(fullDecl);
+			}
+			@Override public boolean isTemplateSecondary() {
+				return isTemplateSpecialization;
 			}
 		};
 	}
@@ -340,63 +349,87 @@ public class Main {
 					if (simpleDeclaration.getDeclarators().length > 0) {
 						throw new RuntimeException("Unexpected declaration");
 					}
-					ClassRegion classRegion = dumpAndCreateClassRegion(currentVisibility, d, composite, false, printer);
+					ClassRegion classRegion = dumpAndCreateClassRegion(currentVisibility, d, composite, false, false, printer);
 					printer.println(">");
 					return Collections.singletonList(classRegion);
 				}
 			}
-			final boolean isTypeFinal = (sp.getStorageClass() & IASTDeclSpecifier.sc_typedef) != 0;  
 			IASTDeclarator[] decls = simpleDeclaration.getDeclarators();
 			List<Region> regionList = new ArrayList<Region>(decls.length);
-			for (int i = 0; i < decls.length; i++) {
-				final IASTDeclarator dd = decls[i];
-				final int pos = i;
-				printer.println("<declaration name=" + dd.getName().getRawSignature() + " isType=" + isTypeFinal + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(dd.getName()) + ", declaratorIndex=" + i + ", declaration=" + getLocationString(d) + " declarator=" + getLocationString(dd) + ">");
-				DeclarationRegion typedefRegion = new DeclarationRegion() {
-					@Override public <T> T accept(Visitor<T> visitor) {
-						return visitor.visitDeclaration(this);
-					}
-					@Override public Integer visibility() {
-						return currentVisibility;
-					}
-					@Override public int nameToken() {
-						return createSingleTokenPosition(dd.getName());
-					}
-					@Override public boolean isType() {
-						return isTypeFinal;
-					}
-					@Override public int declaratorNumber() {
-						return pos;
-					}
-					@Override public TokenRange declarator() {
-						return createRange(dd);
-					}
-					@Override public TokenRange declaration() {
-						return createRange(d);
-					}
-				};
-				regionList.add(typedefRegion);
+			if (decls.length != 1) {
+				return createErrorRegion(d, "Multiple declarators (" + decls.length + ")", printer);
 			}
+			final IASTDeclarator dd = decls[0];
+			printer.println("<declaration name=" + dd.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(dd.getName()) + ", declaration=" + getLocationString(d) + " declarator=" + getLocationString(dd) + ">");
+			DeclarationRegion typedefRegion = new DeclarationRegion() {
+				@Override public <T> T accept(Visitor<T> visitor) {
+					return visitor.visitDeclaration(this);
+				}
+				@Override public Integer visibility() {
+					return currentVisibility;
+				}
+				@Override public Integer nameToken() {
+					return createSingleTokenPosition(dd.getName());
+				}
+				@Override public TokenRange declaration() {
+					return createRange(d);
+				}
+				@Override public boolean isTemplateSecondary() {
+					return false;
+				}
+			};
+			regionList.add(typedefRegion);
 			return regionList;
 		} else if (d instanceof ICPPASTTemplateDeclaration) {
 			ICPPASTTemplateDeclaration templateDeclaration = (ICPPASTTemplateDeclaration) d;
+			boolean isSpecialization = templateDeclaration instanceof ICPPASTTemplateSpecialization;
 			IASTDeclaration internalDeclaration = templateDeclaration.getDeclaration();
-			if (internalDeclaration instanceof IASTSimpleDeclaration) {
+			if (internalDeclaration instanceof IASTFunctionDefinition) {
+				IASTFunctionDefinition functionDef = (IASTFunctionDefinition) internalDeclaration; 
+				FunctionRegion region = dumpFunctionDefinition(functionDef, d, currentVisibility, true, isSpecialization, printer);
+				return Collections.singletonList(region);
+			} else if (internalDeclaration instanceof IASTSimpleDeclaration) {
 				IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) internalDeclaration;
 				IASTDeclSpecifier sp = simpleDeclaration.getDeclSpecifier();
-				if (sp instanceof ICPPASTCompositeTypeSpecifier) {
-					ICPPASTCompositeTypeSpecifier composite = (ICPPASTCompositeTypeSpecifier) sp;
-					printer.println("<templateClass name=" + composite.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(composite.getName()) + " declaration=" + getLocationString(d) + " classLoc=" + getLocationString(composite));
-					if (simpleDeclaration.getDeclarators().length > 0) {
-						throw new RuntimeException("Unexpected declaration");
-					}
-					ClassRegion classRegion = dumpAndCreateClassRegion(currentVisibility, d, composite, true, printer);
-					printer.println(">");
-					return Collections.singletonList(classRegion);
+				if (simpleDeclaration.getDeclarators().length != 0) {
+					return createErrorRegion(internalDeclaration, "Unexpected declarators", printer);
 				}
+				ICPPASTCompositeTypeSpecifier composite = (ICPPASTCompositeTypeSpecifier) sp;
+				printer.println("<templateClass name=" + composite.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(composite.getName()) + " declaration=" + getLocationString(d) + " classLoc=" + getLocationString(composite) + " isSpecialization=" + isSpecialization);
+				ClassRegion classRegion = dumpAndCreateClassRegion(currentVisibility, d, composite, true, isSpecialization, printer);
+				printer.println(">");
+				return Collections.singletonList(classRegion);
+			} else {
+				return createErrorRegion(d, "Unrecognized template", printer);
 			}
+		} else if (d instanceof ICPPASTExplicitTemplateInstantiation) {
+			printer.println("<templateInstantiation visibility=" + currentVisibility + " declaration=" + getLocationString(d) + ">");
+			DeclarationRegion declarationRegion = new DeclarationRegion() {
+				@Override public <T> T accept(Visitor<T> visitor) {
+					return visitor.visitDeclaration(this);
+				}
+				@Override public Integer visibility() {
+					return currentVisibility;
+				}
+				@Override public Integer nameToken() {
+					return null;
+				}
+				@Override public TokenRange declaration() {
+					return createRange(d);
+				}
+				@Override public boolean isTemplateSecondary() {
+					return true;
+				}
+			};
+			return Collections.singletonList(declarationRegion);
 		}
 		return null;
+	}
+	
+	private static Collection<? extends ErrorRegion> createErrorRegion(IASTNode node, String message, Printer printer) {
+		ErrorRegion region = new ErrorRegion.Impl(message, createRange(node));
+		printer.println("<errorRegion range=" + getLocationString(node) + " message='" + message + "'>");
+		return Collections.singletonList(region);
 	}
 	
 	private static NonTypeRegion dumpOther(final Integer visibility, final int begin, final int end, Printer printer) {
@@ -428,8 +461,16 @@ public class Main {
 		return dumpDeclarations(composite, printer);
 	}
 	
-	private static ClassRegion dumpAndCreateClassRegion(final Integer currentVisibility, final IASTDeclaration d, final ICPPASTCompositeTypeSpecifier composite, final boolean isTemplate, Printer printer) {
+	private static ClassRegion dumpAndCreateClassRegion(final Integer currentVisibility, final IASTDeclaration d, final ICPPASTCompositeTypeSpecifier composite,
+			final boolean isTemplate, final boolean isTemplateSpecialization, Printer printer) {
 		final List<? extends Region> innerRegions = dumpClassDefiniton(composite, printer.getInner());
+		IASTName name = composite.getName();
+		if (isTemplateSpecialization) {
+  		  ICPPASTTemplateId templateId = (ICPPASTTemplateId) name;
+  		  name = templateId.getTemplateName();
+		}
+		final IASTName nameFinal = name;
+			
 		return new ClassRegion() {
 			@Override public <T> T accept(Visitor<T> visitor) {
 				return visitor.visitClass(this);
@@ -438,7 +479,7 @@ public class Main {
 				return currentVisibility;
 			}
 			@Override public int nameToken() {
-				return createSingleTokenPosition(composite.getName());
+				return createSingleTokenPosition(nameFinal);
 			}
 			@Override public boolean isTemplate() {
 				return isTemplate;
@@ -451,6 +492,9 @@ public class Main {
 			}
 			@Override public TokenRange classTokens() {
 				return createRange(composite);
+			}
+			@Override public boolean isTemplateSecondary() {
+				return isTemplateSpecialization;
 			}
 		};
 	}
