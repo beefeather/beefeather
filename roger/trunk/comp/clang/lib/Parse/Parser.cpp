@@ -577,7 +577,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
     HandlePragmaUnused();
 
   Result = DeclGroupPtrTy();
-  if (Tok.is(tok::eof) || Tok.is(tok::kw_capybara)) {
+  if (Tok.is(tok::kw_capybara)) {
+    return true;
+  }
+  if (Tok.is(tok::eof)) {
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
       Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
@@ -1036,7 +1039,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
         Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
       } else {
         LexedMethod* LM = new LexedMethod(this, DP);
-        rogerParsingQueue->addAndWrap(LM, Actions.getContainingDC(cast<DeclContext>(DP)));
+        rogerParsingQueue->addAndWrap(LM, DP->getDeclContext());
         LM->TemplateScope = TemplateInfo.Kind == ParsedTemplateInfo::Template;
         LM->Toks.swap(Toks);
       }

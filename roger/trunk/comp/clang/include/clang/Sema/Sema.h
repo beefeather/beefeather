@@ -7593,6 +7593,8 @@ public:
 
   void RogerDefineRecord(CXXRecordDecl *decl);
   void RogerDefineFunction(const FunctionDecl *FunDecl);
+  void RogerParseFunctionArguments(FunctionDecl *FunDecl);
+
   // Return true if roger thinks that enough has been done.
   bool RequireCompleteTypeRoger(QualType T, RogerRequireCompleteReason RogerOnlyInheritance);
   bool RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReason RogerOnlyInheritance);

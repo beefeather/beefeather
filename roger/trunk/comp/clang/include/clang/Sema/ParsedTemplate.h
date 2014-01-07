@@ -183,7 +183,7 @@ namespace clang {
     /// appends it to List.
     static TemplateIdAnnotation *
     Allocate(unsigned NumArgs, SmallVectorImpl<TemplateIdAnnotation*> &List, bool beingCovered) {
-      assert(beingCovered);
+      assert(beingCovered && "TemplateIds array is not being covered");
       TemplateIdAnnotation *TemplateId
         = (TemplateIdAnnotation *)std::malloc(sizeof(TemplateIdAnnotation) +
                                       sizeof(ParsedTemplateArgument) * NumArgs);

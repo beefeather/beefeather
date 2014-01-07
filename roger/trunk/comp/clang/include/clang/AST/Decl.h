@@ -1555,7 +1555,8 @@ protected:
       IsConstexpr(isConstexprSpecified), HasSkippedBody(false),
       EndRangeLoc(NameInfo.getEndLoc()),
       TemplateOrSpecialization(),
-      DNLoc(NameInfo.getInfo()) {}
+      DNLoc(NameInfo.getInfo()),
+      rogerDeferredBodyParse(0), rogerDeferredDeclarationParse(0) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   virtual FunctionDecl *getNextRedeclaration() { return RedeclLink.getNext(); }
@@ -2114,6 +2115,8 @@ public:
 
   // Roger.
 public:
+  RogerItemizedLateParseCallback *rogerDeferredBodyParse;
+  RogerItemizedLateParseCallback *rogerDeferredDeclarationParse;
 };
 
 

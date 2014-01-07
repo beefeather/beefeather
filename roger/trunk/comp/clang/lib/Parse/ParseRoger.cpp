@@ -588,6 +588,15 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
     Consumer->HandleTopLevelDecl(topLevelDecls.List[i].get());
   }
 
+  {
+    // Late template parsing can begin.
+    if (getLangOpts().DelayedTemplateParsing)
+      Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
+    if (!PP.isIncrementalProcessingEnabled())
+      Actions.ActOnEndOfTranslationUnit();
+    //else don't tell Sema that we ended parsing: more input might come.
+  }
+
   Actions.ActOnRogerModeFinish();
   rogerParsingQueue = 0;
 }
@@ -1368,6 +1377,9 @@ void Parser::PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *clas
   RogerNestedTokensState parseNestedTokens(this, &classDecl->Toks[classDecl->declaration.begin] + tokenOffset, classDecl->declaration.size() - tokenOffset);
   RogerParseScope scope(this, recDecl->getDeclContext(), recDecl);
 
+  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
 
   // Quick hack.
   SourceLocation StartLoc = Tok.getLocation();
@@ -1561,3 +1573,87 @@ void Parser::ParseLexedRogerStaticVarInitializer(LateParsedStaticVarInitializer:
   assert(Tok.is(tok::eof));
   ConsumeAnyToken();
 }
+
+template<void (Parser::LateParsedDeclaration::*parseMethod)(), RogerItemizedLateParseCallback * FunctionDecl::*callbackField>
+Parser::LateParsedDeclaration *Parser::CreateOnDemandLateParsedDeclaration(LateParsedDeclaration *LM, DeclContext *DC,
+    Decl *ND) {
+  FunctionDecl *FD;
+  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+    FD = FTD->getTemplatedDecl();
+  else
+    FD = cast<FunctionDecl>(ND);
+
+  struct CB : RogerItemizedLateParseCallback {
+    Parser *P;
+    DeclContext *DC;
+    LateParsedDeclaration *LM;
+    FunctionDecl *FD;
+    RogerCallbackGuard guard;
+    bool isInUse;
+    CB() : isInUse(false) {}
+    bool isBusy() {
+      return isInUse;
+    }
+    void parseDeferred() {
+      RogerCallbackInUseScope inUse(&isInUse);
+      guard.check();
+
+      DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(P->TemplateIds, P->TemplateIdsBeingCovered);
+      ParenBraceBracketBalancer BalancerRAIIObj(*P);
+
+      RogerParseScope parseScope(P, DC);
+      (LM->*parseMethod)();
+      delete LM;
+    }
+  };
+  CB *cb = new CB;
+  cb->P = this;
+  cb->DC = DC;
+  cb->LM = LM;
+  cb->FD = FD;
+
+  FD->*callbackField = cb;
+
+  struct LP : LateParsedDeclaration {
+    Parser *P;
+    FunctionDecl *FD;
+    LateParsedDeclaration *LM;
+
+    void ParseLexedMethodDefs() {
+      callParseMethod(&LateParsedDeclaration::ParseLexedMethodDefs);
+    }
+
+    void ParseLexedMethodDeclarations() {
+      callParseMethod(&LateParsedDeclaration::ParseLexedMethodDeclarations);
+    }
+
+    void callParseMethod(void (Parser::LateParsedDeclaration::*invokedMethod)()) {
+      if (invokedMethod != parseMethod) {
+        return;
+      }
+      if (!(FD->*callbackField)) {
+        return;
+      }
+      delete (FD->*callbackField);
+      FD->*callbackField = 0;
+      LM->ParseLexedMethodDefs();
+      delete LM;
+    }
+
+  };
+  LP *lp = new LP();
+  lp->P = this;
+  lp->LM = LM;
+  lp->FD = FD;
+  return lp;
+}
+
+Parser::LateParsedDeclaration *Parser::CreateOnDemandLexedMethod(LexedMethod *LM, DeclContext *DC) {
+  Decl *ND = LM->D;
+  return CreateOnDemandLateParsedDeclaration<&LateParsedDeclaration::ParseLexedMethodDefs, &FunctionDecl::rogerDeferredBodyParse>(LM, DC, ND);
+}
+
+template
+Parser::LateParsedDeclaration *Parser::CreateOnDemandLateParsedDeclaration
+    <&Parser::LateParsedDeclaration::ParseLexedMethodDeclarations, &FunctionDecl::rogerDeferredDeclarationParse>
+    (LateParsedDeclaration *LM, DeclContext *DC, Decl *ND);

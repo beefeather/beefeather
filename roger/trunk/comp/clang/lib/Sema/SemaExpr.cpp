@@ -3832,9 +3832,18 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
                                         FunctionDecl *FD,
                                         ParmVarDecl *Param) {
   if (Param->hasUnparsedDefaultArg()) {
-    Diag(CallLoc,
+    RogerParseFunctionArguments(FD);
+  }
+  if (Param->hasUnparsedDefaultArg()) {
+    Sema::SemaDiagnosticBuilder builder = Diag(CallLoc,
          diag::err_use_of_default_argument_to_function_declared_later) <<
-      FD << cast<CXXRecordDecl>(FD->getDeclContext())->getDeclName();
+      // Roger hack here.
+      FD;
+    if (NamedDecl *ND = dyn_cast<NamedDecl>(FD->getDeclContext())) {
+      builder << ND->getDeclName();
+    } else {
+      builder << "<Something unnamed (roger)>";
+    }
     Diag(UnparsedDefaultArgLocs[Param],
          diag::note_default_argument_declared_here);
     return ExprError();

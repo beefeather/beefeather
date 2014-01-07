@@ -2350,6 +2350,10 @@ private:
       const ParsedTemplateInfo &TemplateInfo,
       AccessSpecifier AS, RogerNestedTokensState &parseState, bool &typeSpecError);
   RogerNamespaceDeclList* ParseRogerPartOverview(CachedTokens &Toks);
+  LateParsedDeclaration *CreateOnDemandLexedMethod(LexedMethod *LM, DeclContext *DC);
+  template<void (LateParsedDeclaration::*parseMethod)(), RogerItemizedLateParseCallback * FunctionDecl::*callbackField>
+  LateParsedDeclaration *CreateOnDemandLateParsedDeclaration(LateParsedDeclaration *LM, DeclContext *DC,
+      Decl *ND);
 
 public:
   void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, int tokenOffset);

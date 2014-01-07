@@ -1711,6 +1711,11 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                                         OldParm->getStorageClass());
   if (!NewParm)
     return 0;
+
+  if (OldParm->hasUnparsedDefaultArg()) {
+    FunctionDecl *Fun = cast<FunctionDecl>(OldParm->getDeclContext());
+    RogerParseFunctionArguments(Fun);
+  }
                                                 
   // Mark the (new) default argument as uninstantiated (if any).
   if (OldParm->hasUninstantiatedDefaultArg()) {

@@ -1791,7 +1791,8 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
         // declarations.
         LateMethod = new LateParsedMethodDeclaration(this, ThisDecl);
         if (Actions.IsInRogerMode()) {
-          rogerParsingQueue->addAndWrap(LateMethod, ThisDecl->getDeclContext());
+          LateParsedDeclaration *wrapped = CreateOnDemandLateParsedDeclaration<&LateParsedDeclaration::ParseLexedMethodDeclarations, &FunctionDecl::rogerDeferredDeclarationParse>(LateMethod, ThisDecl->getDeclContext(), ThisDecl);
+          rogerParsingQueue->addAndWrap(wrapped, ThisDecl->getDeclContext());
         } else {
           getCurrentClass().LateParsedDeclarations.push_back(LateMethod);
         }

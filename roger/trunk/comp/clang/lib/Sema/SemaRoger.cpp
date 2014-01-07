@@ -616,7 +616,26 @@ void Sema::RogerDefineRecord(CXXRecordDecl *decl) {
 //}
 
 void Sema::RogerDefineFunction(const FunctionDecl *FunDecl) {
-  // Implement. Take care of template.
+  RogerLogScope logScope("RogerDefineFunction");
+  FunDecl->printQualifiedName(logScope.outs_nl());
+  logScope.outs() << "\n";
+  if (FunDecl->rogerDeferredBodyParse) {
+    FunctionDecl *FunDecl2 = const_cast<FunctionDecl*>(FunDecl);
+    FunDecl2->rogerDeferredBodyParse->parseDeferred();
+    delete FunDecl2->rogerDeferredBodyParse;
+    FunDecl2->rogerDeferredBodyParse = 0;
+  }
+}
+
+void Sema::RogerParseFunctionArguments(FunctionDecl *FunDecl) {
+  RogerLogScope logScope("RogerParseFunctionArguments");
+  FunDecl->printQualifiedName(logScope.outs_nl());
+  logScope.outs() << "\n";
+  if (FunDecl->rogerDeferredDeclarationParse) {
+    FunDecl->rogerDeferredDeclarationParse->parseDeferred();
+    delete FunDecl->rogerDeferredDeclarationParse;
+    FunDecl->rogerDeferredDeclarationParse = 0;
+  }
 }
 
 
