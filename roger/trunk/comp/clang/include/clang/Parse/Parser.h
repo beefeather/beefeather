@@ -52,6 +52,7 @@ namespace clang {
   struct RogerDeclList;
   struct RogerNamespaceDeclList;
   struct RogerDeclaration;
+  struct RogerFile;
 
   class RogerParseScope;
   class RogerRecordParseScope;
@@ -946,7 +947,7 @@ private:
   };
 
   struct LateParsedStaticVarInitializer : public LateParsedDeclaration {
-    LateParsedStaticVarInitializer(Parser *P, VarDecl *FD);
+    LateParsedStaticVarInitializer(Parser *P, VarDecl *FD, RogerFile *file);
 
     virtual void ParseRogerLexedStaticInitializers();
 
@@ -1007,7 +1008,7 @@ private:
     /// nested classes that contain pieces whose parsing will be delayed until
     /// the top-level class is fully defined.
   public:
-    void addAndWrap(LateParsedDeclaration *lateDecl, DeclContext *dc);
+    void addAndWrap(LateParsedDeclaration *lateDecl, DeclContext *dc, RogerFile *file);
     struct Item;
     Item *pop();
   private:
@@ -1019,8 +1020,10 @@ private:
   /// parsed. Nested and local classes will be pushed onto this stack
   /// when they are parsed, and removed afterward.
   std::stack<ParsingClass *> ClassStack;
+  RogerFile *rogerParsingFile;
 
   RogerParsingQueue *rogerParsingQueue;
+
 
   ParsingClass &getCurrentClass() {
     assert(!ClassStack.empty() && "No lexed method stacks!");
@@ -2340,26 +2343,31 @@ private:
   // Roger
 private:
 
-  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerTopLevelDecls *topLevelDecs);
-  void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, ParsingClass *parsingClass);
+  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs);
+  void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, RogerFile *file, ParsingClass *parsingClass);
   template<typename Types>
-  void FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs);
+  void FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs, RogerFile *file);
+  template<typename Types>
+  void FillRogerDeclContextWithNamedDecls(SmallVector<RogerDeclaration*, 4> &NameDeclarationList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs, RogerFile *file);
   void ParseRogerNonTypeRegion(RogerNonType *nonType, int defaultVisibility, DeclContext *DC);
-  DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC);
-  Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl,
+  DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, RogerFile *file, DeclContext *DC);
+  Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl, RogerFile *file,
       const ParsedTemplateInfo &TemplateInfo,
       AccessSpecifier AS, RogerNestedTokensState &parseState, bool &typeSpecError);
   RogerNamespaceDeclList* ParseRogerPartOverview(CachedTokens &Toks);
-  LateParsedDeclaration *CreateOnDemandLexedMethod(LexedMethod *LM, DeclContext *DC);
+  LateParsedDeclaration *CreateOnDemandLexedMethod(LexedMethod *LM, DeclContext *DC, RogerFile *file);
   template<void (LateParsedDeclaration::*parseMethod)(), RogerItemizedLateParseCallback * FunctionDecl::*callbackField>
   LateParsedDeclaration *CreateOnDemandLateParsedDeclaration(LateParsedDeclaration *LM, DeclContext *DC,
-      Decl *ND);
+      Decl *ND, RogerFile *file);
+  DeclContext *ParseRogerNamespaceHeader();
 
 public:
-  void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, int tokenOffset);
-  DeclGroupPtrTy ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, DeclContext *DC, RogerParsingNamespace *parsingNs);
-  DeclGroupPtrTy ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, ParsingClass *parsingClass);
-  void RogerCompleteCXXMemberSpecificationParsing(RecordDecl *recDecl, ParsingClass *parsingClass);
+  void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, RogerFile *file, int tokenOffset);
+  DeclGroupPtrTy ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, DeclContext *DC, RogerFile *file, RogerParsingNamespace *parsingNs);
+  DeclGroupPtrTy ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, RogerFile *file, ParsingClass *parsingClass);
+  void RogerCompleteCXXMemberSpecificationParsing(RecordDecl *recDecl, RogerFile *file, ParsingClass *parsingClass);
+  NamespaceDecl *GetOrParseRogerFileScope(RogerFile *file);
+
 //  void RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs);
 
   void ParseRogerPartOpt(ASTConsumer *Consumer);

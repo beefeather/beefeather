@@ -657,12 +657,10 @@ static void DeclareImplicitMemberFunctionsWithName(Sema &S,
 
 // Adds all qualifying matches for a name within a decl context to the
 // given lookup result.  Returns true if any matches were found.
-static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC, DeclContext *mutableDC) {
+static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC, DeclContext *mutableDCIgnore) {
   bool Found = false;
 
-  if (mutableDC) {
-    S.MaterializeRogerNames(R.getLookupName(), mutableDC, R.isForRedeclaration());
-  }
+  S.MaterializeRogerNames(R.getLookupName(), const_cast<DeclContext *>(DC), R.isForRedeclaration());
 
   // Lazily declare C++ special member functions.
   if (S.getLangOpts().CPlusPlus)
@@ -886,7 +884,9 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
         DeclareImplicitMemberFunctionsWithName(*this, Name, DC);
   }
 
-  MaterializeRogerNames(Name, S->getEntity(), R.isForRedeclaration());
+  for (Scope *PreS = S; PreS; PreS = PreS->getParent())
+    if (DeclContext *DC = PreS->getEntity())
+      MaterializeRogerNames(Name, DC, R.isForRedeclaration());
 
 
   // Implicitly declare member functions with the name we're looking for, if in
@@ -1083,6 +1083,15 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   // extern declarations outside of a function scope.
   if (!R.isForRedeclaration())
     FindLocals.restore();
+
+
+  // Roger hack: before translation unit, consult import namespace.
+  if (CurRogerImportNamespace) {
+    if (LookupQualifiedName(R, CurRogerImportNamespace)) {
+      R.resolveKind();
+      return true;
+    }
+  }
 
   // Lookup namespace scope, and global scope.
   // Unqualified name lookup in C++ requires looking into scopes

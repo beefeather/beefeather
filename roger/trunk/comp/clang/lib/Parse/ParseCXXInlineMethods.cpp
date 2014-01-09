@@ -140,8 +140,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
   LexedMethod* LM = new LexedMethod(this, FnD);
   if (Actions.IsInRogerMode()) {
     DeclContext *DC2 = Actions.getContainingDC(cast<DeclContext>(FnD));
-    LateParsedDeclaration *wrappedLM = CreateOnDemandLexedMethod(LM, DC2);
-    rogerParsingQueue->addAndWrap(wrappedLM, DC2);
+    LateParsedDeclaration *wrappedLM = CreateOnDemandLexedMethod(LM, DC2, rogerParsingFile);
+    rogerParsingQueue->addAndWrap(wrappedLM, DC2, rogerParsingFile);
   } else {
     getCurrentClass().LateParsedDeclarations.push_back(LM);
   }
@@ -210,7 +210,7 @@ void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic
   if (isStatic) {
     // Correct?
     VarDecl *VD = cast<VarDecl>(VarD);
-    LateParsedStaticVarInitializer *MI = new LateParsedStaticVarInitializer(this, VD);
+    LateParsedStaticVarInitializer *MI = new LateParsedStaticVarInitializer(this, VD, rogerParsingFile);
     ToksPointer = &MI->getToks();
     lateDecl = MI;
   } else {
@@ -221,7 +221,7 @@ void Parser::ParseCXXNonStaticOrRogerMemberInitializer(Decl *VarD, bool isStatic
   }
 
   if (Actions.IsInRogerMode()) {
-    rogerParsingQueue->addAndWrap(lateDecl, VarD->getDeclContext());
+    rogerParsingQueue->addAndWrap(lateDecl, VarD->getDeclContext(), rogerParsingFile);
   } else {
     getCurrentClass().LateParsedDeclarations.push_back(lateDecl);
   }

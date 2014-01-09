@@ -31,12 +31,12 @@
 
 using namespace clang;
 
-void Sema::ActOnNamedDeclarationRoger(DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
+void Sema::ActOnNamedDeclarationRoger(DeclContext *DC, DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
   DeclContext::UnparsedNamedDecl *node = new DeclContext::UnparsedNamedDecl;
   node->name = Name;
   node->isTemplateSpec = isTemplateSpec;
   node->callback = callback;
-  CurContext->unparsedDecls.push_back(node);
+  DC->unparsedDecls.push_back(node);
 }
 
 static void AddRogerDeclarationToCurrentRecord(RogerItemizedLateParseCallback *callback, bool isTemplateSpec, DeclContext *dc, llvm::ilist<DeclContext::UnparsedNamedDecl> RecordDecl::RogerState::* field) {
@@ -48,14 +48,14 @@ static void AddRogerDeclarationToCurrentRecord(RogerItemizedLateParseCallback *c
   (rd->rogerState->*field).push_back(node);
 }
 
-void Sema::ActOnConversionDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, isTemplateSpec, CurContext, &RecordDecl::RogerState::rogerConversionDecls);
+void Sema::ActOnConversionDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
+  AddRogerDeclarationToCurrentRecord(callback, isTemplateSpec, DC, &RecordDecl::RogerState::rogerConversionDecls);
 }
-void Sema::ActOnConstructorDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, isTemplateSpec, CurContext, &RecordDecl::RogerState::rogerConstructorDecls);
+void Sema::ActOnConstructorDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback) {
+  AddRogerDeclarationToCurrentRecord(callback, isTemplateSpec, DC, &RecordDecl::RogerState::rogerConstructorDecls);
 }
-void Sema::ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback) {
-  AddRogerDeclarationToCurrentRecord(callback, false, CurContext, &RecordDecl::RogerState::rogerDestructorDecls);
+void Sema::ActOnDestructorDeclarationRoger(DeclContext *DC, RogerItemizedLateParseCallback *callback) {
+  AddRogerDeclarationToCurrentRecord(callback, false, DC, &RecordDecl::RogerState::rogerDestructorDecls);
 }
 
 
@@ -252,7 +252,7 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
     if (Redecl) {
       logScope.outs() << " for redeclaration";
     }
-    logScope.outs() << todo.size() << " item(s)\n";
+    logScope.outs() << " " << todo.size() << " item(s)\n";
 
     callParseDeferred(todo);
   }
@@ -487,6 +487,123 @@ NamespaceDecl *Sema::ActOnRogerNamespaceDef(Scope *NamespcScopeIgnore,
   CurContext->addDecl(Namespc);
 
   return Namespc;
+}
+
+NamespaceDecl *Sema::ActOnRogerNamespaceHeaderPart(DeclContext *DeclContext, IdentifierInfo *II,
+    SourceLocation IdentLoc,
+    AttributeList *AttrList) {
+  // set CurContext
+
+  SourceLocation NamespaceLoc;
+  SourceLocation InlineLoc;
+  SourceLocation StartLoc = InlineLoc.isValid() ? InlineLoc : NamespaceLoc;
+
+  assert(II);
+  SourceLocation Loc = IdentLoc;
+  bool IsInline = false;
+  bool IsInvalid = false;
+  bool IsStd = false;
+  bool AddToKnown = false;
+  //Scope *DeclRegionScope = NamespcScope->getParent();
+
+  NamespaceDecl *PrevNS = 0;
+  // C++ [namespace.def]p2:
+  //   The identifier in an original-namespace-definition shall not
+  //   have been previously defined in the declarative region in
+  //   which the original-namespace-definition appears. The
+  //   identifier in an original-namespace-definition is the name of
+  //   the namespace. Subsequently in that declarative region, it is
+  //   treated as an original-namespace-name.
+  //
+  // Since namespace names are unique in their scope, and we don't
+  // look through using directives, just look for any ordinary names.
+
+  const unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_Member |
+  Decl::IDNS_Type | Decl::IDNS_Using | Decl::IDNS_Tag |
+  Decl::IDNS_Namespace;
+  NamedDecl *PrevDecl = 0;
+  DeclContext::lookup_result R = DeclContext->getRedeclContext()->lookup(II);
+  for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E;
+       ++I) {
+    if ((*I)->getIdentifierNamespace() & IDNS) {
+      PrevDecl = *I;
+      break;
+    }
+  }
+
+  PrevNS = dyn_cast_or_null<NamespaceDecl>(PrevDecl);
+
+  if (PrevNS) {
+    // This is an extended namespace definition.
+    if (IsInline != PrevNS->isInline()) {
+//      DiagnoseNamespaceInlineMismatch(*this, NamespaceLoc, Loc, II,
+//                                      &IsInline, PrevNS);
+      assert(false && "need to implement this");
+    }
+    return PrevNS;
+  } else if (PrevDecl) {
+    // This is an invalid name redefinition.
+    Diag(Loc, diag::err_redefinition_different_kind)
+      << II;
+    Diag(PrevDecl->getLocation(), diag::note_previous_definition);
+    IsInvalid = true;
+    // Continue on to push Namespc as current DeclContext and return it.
+  } else if (II->isStr("std") &&
+             DeclContext->getRedeclContext()->isTranslationUnit()) {
+    // This is the first "real" definition of the namespace "std", so update
+    // our cache of the "std" namespace to point at this definition.
+    PrevNS = getStdNamespace();
+    IsStd = true;
+    AddToKnown = !IsInline;
+  } else {
+    // We've seen this namespace for the first time.
+    AddToKnown = !IsInline;
+  }
+
+  NamespaceDecl *Namespc = NamespaceDecl::Create(Context, DeclContext, IsInline,
+                                                 StartLoc, Loc, II, PrevNS);
+  Namespc->IsRogerNamespace = true;
+
+  if (IsInvalid)
+    Namespc->setInvalidDecl();
+
+  //ProcessDeclAttributeList(DeclRegionScope, Namespc, AttrList);
+
+  // FIXME: Should we be merging attributes?
+  if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
+    PushNamespaceVisibilityAttr(Attr, Loc);
+
+  if (IsStd)
+    StdNamespace = Namespc;
+  if (AddToKnown)
+    KnownNamespaces[Namespc] = false;
+
+  DeclContext->addDecl(Namespc);
+
+  if (PrevNS) {
+    return PrevNS;
+  } else {
+    return Namespc;
+  }
+}
+
+NamespaceDecl *Sema::ActOnEnterRogerFileScopeNamespace(Scope *NamespcScope) {
+  IdentifierInfo &II = Context.Idents.get("roger file scope namespace");
+  NamespaceDecl *Namespc = NamespaceDecl::Create(Context, CurContext, false,
+                                                 SourceLocation(), SourceLocation(), &II, 0);
+  Namespc->IsRogerNamespace = true;
+
+  Namespc->setLexicalDeclContext(CurContext);
+
+  //DeclContext->addDecl(Namespc);
+
+  PushDeclContext(NamespcScope, Namespc);
+
+  return Namespc;
+}
+
+void Sema::ActOnExitRogerFileScopeNamespace() {
+  PopDeclContext();
 }
 
 void Sema::ActOnTagPauseDefinitionRoger(Decl *TagD) {

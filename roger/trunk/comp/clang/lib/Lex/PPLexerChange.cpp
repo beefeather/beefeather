@@ -226,12 +226,14 @@ Preprocessor::RogerStreamState *Preprocessor::EnterRogerTokenStream(const Token 
 
   state->sentinelTok.startToken();
   state->sentinelTok.setKind(tok::eof);
+  state->sentinelTok.setLocation(Toks->getLocation());
+  state->IncludeMacroStackSize = IncludeMacroStack.size();
+
   EnterTokenStream(&state->sentinelTok, 1, true, false);
   state->sentinelTokenLexer = CurTokenLexer.get();
   EnterTokenStream(Toks, NumToks, true, false);
   state->mainTokenLexer = CurTokenLexer.get();
 
-  state->IncludeMacroStackSize = IncludeMacroStack.size();
   RogerStreamStates.push_back(state);
   return state;
 }
@@ -243,8 +245,19 @@ unsigned Preprocessor::GetRogerTokenStreamPosition(RogerStreamState *state) {
 void Preprocessor::ExitRogerTokenStream(RogerStreamState *state) {
   assert(!RogerStreamStates.empty() && RogerStreamStates.back() == state);
   RogerStreamStates.pop_back();
-  assert(state->IncludeMacroStackSize - 1 == IncludeMacroStack.size());
-  assert(state->sentinelTokenLexer == CurTokenLexer.get());
+  // Make sure only empty lexers left.
+  for (size_t i = state->IncludeMacroStackSize; i < IncludeMacroStack.size(); ++i) {
+    if (i + 1 < IncludeMacroStack.size()) {
+      IncludeStackInfo &extraInfo = IncludeMacroStack[i + 1];
+      assert(extraInfo.CurLexerKind == CLK_TokenLexer);
+      assert(extraInfo.TheTokenLexer);
+      assert(extraInfo.TheTokenLexer->isAtEnd());
+    } else {
+      assert(this->CurLexerKind == CLK_TokenLexer);
+      assert(this->CurTokenLexer);
+      assert(this->CurTokenLexer->isAtEnd());
+    }
+  }
   state->BacktrackPositions.swap(BacktrackPositions);
   CachedLexPos = state->CachedPos;
   state->Cached.swap(CachedTokens);

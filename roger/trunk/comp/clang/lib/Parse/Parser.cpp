@@ -55,7 +55,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   : PP(pp), Actions(actions), Diags(PP.getDiagnostics()),
     GreaterThanIsOperator(true), ColonIsSacred(false), 
     InMessageExpression(false), TemplateParameterDepth(0),
-    ParsingInObjCContainer(false), rogerParsingQueue(0) {
+    ParsingInObjCContainer(false), rogerParsingFile(0), rogerParsingQueue(0) {
   TemplateIdsBeingCovered = false;
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
@@ -1039,7 +1039,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
         Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
       } else {
         LexedMethod* LM = new LexedMethod(this, DP);
-        rogerParsingQueue->addAndWrap(LM, DP->getDeclContext());
+        rogerParsingQueue->addAndWrap(LM, DP->getDeclContext(), rogerParsingFile);
         LM->TemplateScope = TemplateInfo.Kind == ParsedTemplateInfo::Template;
         LM->Toks.swap(Toks);
       }

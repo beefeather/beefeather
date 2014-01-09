@@ -7570,10 +7570,10 @@ public:
                                    Expr *SubExpr);
 
   // Roger
-  void ActOnNamedDeclarationRoger(DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
-  void ActOnConversionDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
-  void ActOnConstructorDeclarationRoger(bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
-  void ActOnDestructorDeclarationRoger(RogerItemizedLateParseCallback *callback);
+  void ActOnNamedDeclarationRoger(DeclContext *DC, DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnConversionDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnConstructorDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnDestructorDeclarationRoger(DeclContext *DC, RogerItemizedLateParseCallback *callback);
   void ActOnNamespaceFinishRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
   void CompleteDeclContextRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4> *TopLevelList);
   void CompleteDeclRoger(Decl* D);
@@ -7590,6 +7590,13 @@ public:
       SourceLocation NameLoc,
       RogerItemizedLateParseCallback *rogerCallback,
       AttributeList *AttrList);
+
+  NamespaceDecl *ActOnRogerNamespaceHeaderPart(DeclContext *DeclContext, IdentifierInfo *II,
+      SourceLocation IdentLoc,
+      AttributeList *AttrList);
+
+  NamespaceDecl *ActOnEnterRogerFileScopeNamespace(Scope *NamespcScope);
+  void ActOnExitRogerFileScopeNamespace();
 
   void RogerDefineRecord(CXXRecordDecl *decl);
   void RogerDefineFunction(const FunctionDecl *FunDecl);
@@ -8007,6 +8014,9 @@ protected:
   friend class ASTWriter;
 
 public:
+
+  NamespaceDecl *CurRogerImportNamespace;
+
   /// \brief Retrieve the parser's current scope.
   ///
   /// This routine must only be used when it is certain that semantic analysis
