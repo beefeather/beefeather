@@ -19,7 +19,8 @@ import org.eclipse.cdt.core.parser.util.ArrayUtil;
 import org.eclipse.cdt.internal.core.dom.parser.ASTAmbiguousNode;
 import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousParameterDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.IASTInternalScope;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Handles ambiguities for parameter declarations.

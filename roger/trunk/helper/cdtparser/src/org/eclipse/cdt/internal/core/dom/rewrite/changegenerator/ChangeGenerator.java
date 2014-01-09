@@ -54,17 +54,8 @@ import org.eclipse.cdt.internal.core.dom.rewrite.astwriter.ContainerNode;
 import org.eclipse.cdt.internal.core.dom.rewrite.astwriter.ProblemRuntimeException;
 import org.eclipse.cdt.internal.core.dom.rewrite.commenthandler.NodeCommentMap;
 import org.eclipse.cdt.internal.formatter.ChangeFormatter;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.ltk.core.refactoring.Change;
-import org.eclipse.ltk.core.refactoring.CompositeChange;
-import org.eclipse.ltk.core.refactoring.TextFileChange;
-import org.eclipse.text.edits.DeleteEdit;
-import org.eclipse.text.edits.InsertEdit;
-import org.eclipse.text.edits.MultiTextEdit;
-import org.eclipse.text.edits.ReplaceEdit;
-import org.eclipse.text.edits.TextEdit;
-import org.eclipse.text.edits.TextEditGroup;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 public class ChangeGenerator extends ASTVisitor {
 	private final Map<IASTNode, Map<ModificationKind, List<ASTModification>>> classifiedModifications =

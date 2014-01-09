@@ -21,9 +21,9 @@ import org.eclipse.cdt.core.model.IBinary;
 import org.eclipse.cdt.core.model.IBinaryContainer;
 import org.eclipse.cdt.core.model.ICElement;
 import org.eclipse.cdt.internal.core.util.MementoTokenizer;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.IProgressMonitor;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 public class BinaryContainer extends Openable implements IBinaryContainer {
 

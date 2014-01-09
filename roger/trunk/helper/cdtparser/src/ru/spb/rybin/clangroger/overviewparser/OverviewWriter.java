@@ -123,7 +123,39 @@ class OverviewWriter {
 		private void writeFunction(FunctionRegion functionRegion) {
 			writeByte((byte) 4);
 			writeVisibility(functionRegion.visibility());
-			functionRegion.name().accept(new DeclarationName.Visitor<Void>() {
+			writeDeclarationName(functionRegion.name());
+			writeRange(functionRegion.declaration());
+			writeByte((byte)(functionRegion.isTemplateSecondary() ? 1 : 0));
+		}
+		private void writeNamespace(NamespaceRegion namespaceRegion) {
+			writeByte((byte) 5);
+			writeInt16(namespaceRegion.nameToken());
+			for (Region r : namespaceRegion.innerRegions()) {
+				writeRegion(r);
+			}
+			writeByte((byte) 0);
+		}
+		
+		private void writeUsing(UsingRegion usingRegion) {
+			writeByte((byte) 6);
+			writeVisibility(usingRegion.visibility());
+			if (usingRegion.name() == null) {
+				writeBool(false);
+			} else {
+				writeBool(true);
+				writeDeclarationName(usingRegion.name());
+			}
+			writeRange(usingRegion.declaration());
+		}
+
+		private void writeError(ErrorRegion errorRegion) {
+			writeByte((byte) 7);
+			writeRange(errorRegion.declaration());
+			writeString(errorRegion.errorMessage());
+		}
+		
+		private void writeDeclarationName(DeclarationName declarationName) {
+			declarationName.accept(new DeclarationName.Visitor<Void>() {
 				@Override
 				public Void visitPlain(Plain plain) {
 					writeByte((byte) 0);
@@ -157,28 +189,6 @@ class OverviewWriter {
 					return null;
 				}
 			});
-			writeRange(functionRegion.declaration());
-			writeByte((byte)(functionRegion.isTemplateSecondary() ? 1 : 0));
-		}
-		private void writeNamespace(NamespaceRegion namespaceRegion) {
-			writeByte((byte) 5);
-			writeInt16(namespaceRegion.nameToken());
-			for (Region r : namespaceRegion.innerRegions()) {
-				writeRegion(r);
-			}
-			writeByte((byte) 0);
-		}
-		
-		private void writeUsing(UsingRegion usingRegion) {
-			writeByte((byte) 6);
-			writeVisibility(usingRegion.visibility());
-			writeRange(usingRegion.declaration());
-		}
-
-		private void writeError(ErrorRegion errorRegion) {
-			writeByte((byte) 7);
-			writeRange(errorRegion.declaration());
-			writeString(errorRegion.errorMessage());
 		}
 		
 		private void writeVisibility(Integer visibility) {
@@ -289,6 +299,7 @@ class OverviewWriter {
   
   interface UsingRegion extends Region {
 	  Integer visibility();
+	  DeclarationName name();
 	  TokenRange declaration();
   }
   

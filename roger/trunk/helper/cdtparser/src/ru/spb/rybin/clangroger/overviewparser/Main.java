@@ -28,10 +28,12 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConversionName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExplicitTemplateInstantiation;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceDefinition;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTOperatorName;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTQualifiedName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateId;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateSpecialization;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDeclaration;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDirective;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndex;
@@ -44,6 +46,7 @@ import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.cdt.internal.core.parser.EmptyFilesProvider;
 
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.*;
+import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Visitor;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class Main {
@@ -175,6 +178,11 @@ public class Main {
 					UsingRegion region = dumpUsingDeclaration(usingDecl, currentVisibility, printer);
 					regions.add(region);
 					other = false;
+				} else if (d instanceof ICPPASTUsingDirective) {
+					ICPPASTUsingDirective usingDir = (ICPPASTUsingDirective) d;
+					UsingRegion region = dumpUsingDirective(usingDir, currentVisibility, printer);
+					regions.add(region);
+					other = false;
 				} else {
 					Collection<? extends Region> typeRegions = dumpTypeItem(d, currentVisibility, printer);
 					if (typeRegions == null) {
@@ -217,12 +225,35 @@ public class Main {
   		  ICPPASTTemplateId templateId = (ICPPASTTemplateId) name;
   		  name = templateId.getTemplateName();
 		}
-		final IASTName nameFinal = name;
 		if (name.isQualified()) {
 			throw new RuntimeException("Unexpected qualified name");
 		}
 		
-		final DeclarationName declarationName;
+		final DeclarationName declarationName = createName(name, functionDef);
+		
+		printer.println("<function name=" + name.toString() + " isTemplate=" + isTemplate + " isSpecialization=" + isTemplateSpecialization +
+				" visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " fullDeclaration=" + getLocationString(fullDecl));
+		return new FunctionRegion() {
+			@Override public <T> T accept(Visitor<T> visitor) {
+				return visitor.visitFunction(this);
+			}
+			@Override public Integer visibility() {
+				return currentVisibility;
+			}
+			@Override public DeclarationName name() {
+				return declarationName;
+			}
+			@Override public TokenRange declaration() {
+				return createRange(fullDecl);
+			}
+			@Override public boolean isTemplateSecondary() {
+				return isTemplateSpecialization;
+			}
+		};
+	}
+	
+	private static DeclarationName createName(final IASTName name, IASTFunctionDefinition functionDef) {
+		DeclarationName declarationName; 
 		if (name instanceof ICPPASTOperatorName) {
 			final ICPPASTOperatorName operatorName = (ICPPASTOperatorName) name;
 			final boolean isArray = operatorName.getNodeLocations()[0].getNodeLength() == 4 && operatorName.getRawToken(2).getType() == IToken.tLBRACE;
@@ -251,26 +282,28 @@ public class Main {
 			};
 		} else {
 			declarationNameDone: {
-				IASTDeclSpecifier declSpec = functionDef.getDeclSpecifier();
-				if (name.getNodeLocations()[0].getNodeLength() == 1) {
-					if (declSpec instanceof IASTSimpleDeclSpecifier) {
-						IASTSimpleDeclSpecifier simpleDeclSpecifier = (IASTSimpleDeclSpecifier) declSpec;
-						if (simpleDeclSpecifier.getType() == IASTSimpleDeclSpecifier.sc_unspecified) {
-							if (functionDef.getParent() instanceof IASTCompositeTypeSpecifier) {
-								IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier) functionDef.getParent();
-								String className = compositeTypeSpecifier.getName().getRawSignature();
-								String funName = name.getRawSignature();
-								if (funName.equals(className)) {
-									declarationName = new DeclarationName.Constructor() {
-										@Override public <R> R accept(Visitor<R> visitor) {
-											return visitor.visitConstructor(this);
-										}
-									};
-									break declarationNameDone;
+				if (functionDef != null) {
+					IASTDeclSpecifier declSpec = functionDef.getDeclSpecifier();
+					if (name.getNodeLocations()[0].getNodeLength() == 1) {
+						if (declSpec instanceof IASTSimpleDeclSpecifier) {
+							IASTSimpleDeclSpecifier simpleDeclSpecifier = (IASTSimpleDeclSpecifier) declSpec;
+							if (simpleDeclSpecifier.getType() == IASTSimpleDeclSpecifier.sc_unspecified) {
+								if (functionDef.getParent() instanceof IASTCompositeTypeSpecifier) {
+									IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier) functionDef.getParent();
+									String className = compositeTypeSpecifier.getName().getRawSignature();
+									String funName = name.getRawSignature();
+									if (funName.equals(className)) {
+										declarationName = new DeclarationName.Constructor() {
+											@Override public <R> R accept(Visitor<R> visitor) {
+												return visitor.visitConstructor(this);
+											}
+										};
+										break declarationNameDone;
+									}
 								}
 							}
-						}
-		    		}
+			    		}
+					}
 				}
 				declarationName = new DeclarationName.Plain() {
 					@Override public <R> R accept(Visitor<R> visitor) {
@@ -278,35 +311,22 @@ public class Main {
 					}
 					@Override
 					public int token() {
-						return createSingleTokenPosition(nameFinal);
+						return createSingleTokenPosition(name);
 					}
 				};
 			}
 		}
-		
-		printer.println("<function name=" + name.toString() + " isTemplate=" + isTemplate + " isSpecialization=" + isTemplateSpecialization +
-				" visibility=" + currentVisibility + " nameLoc=" + getLocationString(name) + " fullDeclaration=" + getLocationString(fullDecl));
-		return new FunctionRegion() {
-			@Override public <T> T accept(Visitor<T> visitor) {
-				return visitor.visitFunction(this);
-			}
-			@Override public Integer visibility() {
-				return currentVisibility;
-			}
-			@Override public DeclarationName name() {
-				return declarationName;
-			}
-			@Override public TokenRange declaration() {
-				return createRange(fullDecl);
-			}
-			@Override public boolean isTemplateSecondary() {
-				return isTemplateSpecialization;
-			}
-		};
+		return declarationName;
 	}
 	
 	private static UsingRegion dumpUsingDeclaration(final ICPPASTUsingDeclaration usingDecl, final Integer currentVisibility, Printer printer) {
-		printer.println("<using visibility=" + currentVisibility + " declaration=" + getLocationString(usingDecl));
+		printer.println("<using declaration visibility=" + currentVisibility + " name=" + usingDecl.getName() + " declaration=" + getLocationString(usingDecl));
+		IASTName astName = usingDecl.getName();
+		if (astName instanceof ICPPASTQualifiedName) {
+			ICPPASTQualifiedName qualifiedName = (ICPPASTQualifiedName) astName;
+			astName = qualifiedName.getLastName();
+		}
+		final DeclarationName name = createName(astName, null);
 		return new UsingRegion() {
 			@Override public <T> T accept(Visitor<T> visitor) {
 				return visitor.visitUsing(this);
@@ -314,8 +334,29 @@ public class Main {
 			@Override public Integer visibility() {
 				return currentVisibility;
 			}
+			@Override public DeclarationName name() {
+				return name;
+			}
 			@Override public TokenRange declaration() {
 				return createRange(usingDecl);
+			}
+		};
+	}
+	
+	private static UsingRegion dumpUsingDirective(final ICPPASTUsingDirective usingDir, final Integer currentVisibility, Printer printer) {
+		printer.println("<using directive visibility=" + currentVisibility + " declaration=" + getLocationString(usingDir));
+		return new UsingRegion() {
+			@Override public <T> T accept(Visitor<T> visitor) {
+				return visitor.visitUsing(this);
+			}
+			@Override public Integer visibility() {
+				return currentVisibility;
+			}
+			@Override public DeclarationName name() {
+				return null;
+			}
+			@Override public TokenRange declaration() {
+				return createRange(usingDir);
 			}
 		};
 	}

@@ -27,15 +27,10 @@ import org.eclipse.cdt.core.model.IIncludeReference;
 import org.eclipse.cdt.internal.core.util.MementoTokenizer;
 import org.eclipse.cdt.utils.PathUtil;
 import org.eclipse.cdt.utils.UNCPathConverter;
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.filesystem.URIUtil;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.Path;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * IncludeReference

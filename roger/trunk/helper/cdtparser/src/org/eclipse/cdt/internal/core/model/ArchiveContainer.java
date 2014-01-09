@@ -20,9 +20,9 @@ import org.eclipse.cdt.core.model.IArchive;
 import org.eclipse.cdt.core.model.IArchiveContainer;
 import org.eclipse.cdt.core.model.ICElement;
 import org.eclipse.cdt.internal.core.util.MementoTokenizer;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.IProgressMonitor;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 public class ArchiveContainer extends Openable implements IArchiveContainer {
 

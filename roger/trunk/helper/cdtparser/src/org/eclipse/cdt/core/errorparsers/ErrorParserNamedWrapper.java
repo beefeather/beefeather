@@ -14,7 +14,8 @@ package org.eclipse.cdt.core.errorparsers;
 import org.eclipse.cdt.core.ErrorParserManager;
 import org.eclipse.cdt.core.IErrorParser;
 import org.eclipse.cdt.core.IErrorParserNamed;
-import org.eclipse.core.runtime.Assert;
+
+import ru.spb.rybin.eclipsereplacement.Assert;
 
 /**
  * Class to wrap any {@link IErrorParser} to {@link IErrorParserNamed}.
