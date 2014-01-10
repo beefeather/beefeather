@@ -79,6 +79,11 @@ class OverviewWriter {
 					return null;
 				}
 				@Override
+				public Void visitEnum(EnumRegion enumRegion) {
+					writeEnum(enumRegion);
+					return null;
+				}
+				@Override
 				public Void visitError(ErrorRegion errorRegion) {
 					writeError(errorRegion);
 					return null;
@@ -152,6 +157,20 @@ class OverviewWriter {
 			writeByte((byte) 7);
 			writeRange(errorRegion.declaration());
 			writeString(errorRegion.errorMessage());
+		}
+
+		private void writeEnum(EnumRegion enumRegion) {
+			writeByte((byte) 8);
+			writeVisibility(enumRegion.visibility());
+			writeInt16(enumRegion.nameToken());
+			for (Integer elName : enumRegion.elementNames()) {
+				if (elName == 0) {
+					throw new RuntimeException("Null enum token");
+				}
+				writeInt16(elName);
+			}
+			writeInt16(0);
+			writeRange(enumRegion.declaration());
 		}
 		
 		private void writeDeclarationName(DeclarationName declarationName) {
@@ -258,6 +277,7 @@ class OverviewWriter {
           T visitFunction(FunctionRegion functionRegion);
           T visitNamespace(NamespaceRegion namespaceRegion);
           T visitUsing(UsingRegion usingRegion);
+          T visitEnum(EnumRegion enumRegion);
           T visitError(ErrorRegion errorRegion);
 	  }
   }
@@ -300,6 +320,12 @@ class OverviewWriter {
   interface UsingRegion extends Region {
 	  Integer visibility();
 	  DeclarationName name();
+	  TokenRange declaration();
+  }
+  interface EnumRegion extends Region {
+	  int nameToken();
+	  Integer visibility();
+	  List<? extends Integer> elementNames(); 
 	  TokenRange declaration();
   }
   

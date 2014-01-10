@@ -15,6 +15,8 @@ import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarationListOwner;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
+import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier;
+import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDefinition;
 import org.eclipse.cdt.core.dom.ast.IASTName;
@@ -43,6 +45,7 @@ import org.eclipse.cdt.core.parser.IParserLogService;
 import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IToken;
 import org.eclipse.cdt.core.parser.ScannerInfo;
+import org.eclipse.cdt.internal.core.dom.parser.IASTInternalEnumerationSpecifier;
 import org.eclipse.cdt.internal.core.parser.EmptyFilesProvider;
 
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.*;
@@ -393,6 +396,42 @@ public class Main {
 					ClassRegion classRegion = dumpAndCreateClassRegion(currentVisibility, d, composite, false, false, printer);
 					printer.println(">");
 					return Collections.singletonList(classRegion);
+				}
+			} else if (sp instanceof IASTInternalEnumerationSpecifier) {
+				IASTEnumerationSpecifier enumerationSpecifier = (IASTEnumerationSpecifier) sp;
+				IASTName name = enumerationSpecifier.getName();
+				if (!name.toString().isEmpty()) {
+					final int nameToken = createSingleTokenPosition(name);
+					final List<Integer> elements = new ArrayList<Integer>();
+					printer.println("<enum name=" + enumerationSpecifier.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(enumerationSpecifier.getName()) + " declaration=" + getLocationString(d));
+	                Printer inner = printer.getInner();
+					for (IASTEnumerator el : enumerationSpecifier.getEnumerators()) {
+						inner.println("<enumElement name=" + el.getName().getRawSignature() + " nameLoc=" + getLocationString(el.getName()));
+						elements.add(createSingleTokenPosition(el.getName()));
+					}
+					printer.println(">");
+					
+					if (simpleDeclaration.getDeclarators().length > 0) {
+						throw new RuntimeException("Unexpected declaration");
+					}
+					EnumRegion enumRegion = new EnumRegion() {
+						@Override public <T> T accept(Visitor<T> visitor) {
+							return visitor.visitEnum(this);
+						}
+						@Override public Integer visibility() {
+							return currentVisibility;
+						}
+						@Override public int nameToken() {
+							return nameToken;
+						}
+						@Override public List<? extends Integer> elementNames() {
+							return elements;
+						}
+						@Override public TokenRange declaration() {
+							return createRange(d);
+						}
+					};
+					return Collections.singletonList(enumRegion);
 				}
 			}
 			IASTDeclarator[] decls = simpleDeclaration.getDeclarators();
