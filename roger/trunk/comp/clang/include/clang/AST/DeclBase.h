@@ -1652,8 +1652,16 @@ public:
     UnparsedNamedDecl() : beingCompiled(false) {}
   };
 
+  struct UnparsedMultiNameDecl : public llvm::ilist_node<UnparsedMultiNameDecl> {
+    RogerItemizedLateParseCallback *callback;
+    SmallVector<DeclarationName, 10> Names;
+    bool beingCompiled;
+    UnparsedMultiNameDecl() : beingCompiled(false) {}
+  };
+
   // roger
   llvm::ilist<UnparsedNamedDecl> unparsedDecls;
+  llvm::ilist<UnparsedMultiNameDecl> unparsedMutiNamedDecls;
 };
 
 inline bool Decl::isTemplateParameter() const {

@@ -50,9 +50,11 @@ namespace clang {
   struct RogerNonType;
   struct RogerClassDecl;
   struct RogerDeclList;
+  struct RogerEnumDecl;
   struct RogerNamespaceDeclList;
   struct RogerDeclaration;
   struct RogerFile;
+  struct RogerBlindParsable;
 
   class RogerParseScope;
   class RogerRecordParseScope;
@@ -2363,8 +2365,8 @@ private:
 
 public:
   void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, RogerFile *file, int tokenOffset);
-  DeclGroupPtrTy ParseRogerDeclarationRegion(RogerDeclaration *rogerDecl, DeclContext *DC, RogerFile *file, RogerParsingNamespace *parsingNs);
-  DeclGroupPtrTy ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, RogerFile *file, ParsingClass *parsingClass);
+  DeclGroupPtrTy ParseRogerDeclarationRegion(RogerBlindParsable *rogerDecl, DeclContext *DC, RogerFile *file, RogerParsingNamespace *parsingNs);
+  DeclGroupPtrTy ParseRogerMemberRegion(RogerBlindParsable *decl, Decl *RD, RogerFile *file, ParsingClass *parsingClass);
   void RogerCompleteCXXMemberSpecificationParsing(RecordDecl *recDecl, RogerFile *file, ParsingClass *parsingClass);
   NamespaceDecl *GetOrParseRogerFileScope(RogerFile *file);
 

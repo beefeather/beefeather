@@ -20,6 +20,7 @@ namespace clang {
 struct RogerNonType;
 struct RogerDeclaration;
 struct RogerClassDecl;
+struct RogerEnumDecl;
 struct RogerNamespace;
 struct RogerFile;
 
@@ -27,6 +28,7 @@ struct RogerDeclList {
   SmallVector<RogerNonType*, 4> NonType;
   SmallVector<RogerDeclaration*, 4> NameDeclaration;
   SmallVector<RogerClassDecl*, 4> ClassDecl;
+  SmallVector<RogerEnumDecl*, 0> EnumDecl;
   SmallVector<RogerDeclaration*, 4> Using;
   SmallVector<RogerNonType*, 4> UsingDir;
 };
@@ -61,7 +63,13 @@ struct RogerNonType {
   RogerRange range;
 };
 
-struct RogerDeclaration {
+struct RogerBlindParsable {
+  virtual Token &rangeBegin() = 0;
+  virtual int rangeSize() = 0;
+  virtual int getVisibility() = 0;
+};
+
+struct RogerDeclaration : RogerBlindParsable {
   RogerDeclaration(CachedTokens &T) : Toks(T) {}
   CachedTokens &Toks;
   int visibility;
@@ -72,6 +80,9 @@ struct RogerDeclaration {
   int nameToken;
   RogerRange range;
   bool isTemplateSecondary;
+  Token &rangeBegin() { return Toks[range.begin]; }
+  int rangeSize() { return range.size(); }
+  int getVisibility() { return visibility; }
 };
 
 struct RogerClassDecl {
@@ -91,6 +102,18 @@ struct RogerNamespace {
   CachedTokens &Toks;
   int nameToken;
   RogerNamespaceDeclList inner;
+};
+
+struct RogerEnumDecl : RogerBlindParsable {
+  RogerEnumDecl(CachedTokens &T) : Toks(T) {}
+  CachedTokens &Toks;
+  int visibility;
+  int nameToken;
+  RogerRange range;
+  SmallVector<int, 4> inner;
+  Token &rangeBegin() { return Toks[range.begin]; }
+  int rangeSize() { return range.size(); }
+  int getVisibility() { return visibility; }
 };
 
 struct RogerTopLevelDecls {
@@ -153,6 +176,9 @@ private:
       break;
     case 7:
       parseErrorRegion();
+      break;
+    case 8:
+      parseEnumRegion(list);
       break;
     default:
       assert(false && "Unknown code");
@@ -233,6 +259,31 @@ private:
     }
   }
 
+  void parseErrorRegion() {
+    RogerRange range;
+    parseRange(range);
+    int len = takeInt16();
+    assert(m_current + len <= m_end);
+    StringRef message(reinterpret_cast<const char *>(m_current), len);
+    m_current += len;
+    P->Diag(Toks[range.begin], diag::err_roger_invalid_region) << message;
+  }
+
+  void parseEnumRegion(RogerDeclList* list) {
+    RogerEnumDecl *declaration = new RogerEnumDecl(Toks);
+    declaration->visibility = takeByte();
+    declaration->nameToken = takeInt16();
+    while (true) {
+      int i = takeInt16();
+      if (i == 0) {
+        break;
+      }
+      declaration->inner.push_back(i);
+    }
+    parseRange(declaration->range);
+    list->EnumDecl.push_back(declaration);
+  }
+
   void parseName(RogerDeclaration::NameKind &nameKind, int &nameToken) {
     int nameKindCode = takeByte();
     switch (nameKindCode) {
@@ -263,16 +314,6 @@ private:
     default:
       assert(false && "Unknown name code");
     }
-  }
-
-  void parseErrorRegion() {
-    RogerRange range;
-    parseRange(range);
-    int len = takeInt16();
-    assert(m_current + len <= m_end);
-    StringRef message(reinterpret_cast<const char *>(m_current), len);
-    m_current += len;
-    P->Diag(Toks[range.begin], diag::err_roger_invalid_region) << message;
   }
 
   void parseRange(RogerRange &range) {
@@ -551,10 +592,10 @@ public:
 
 typedef std::vector<RogerFile*> RogerFileVector;
 
-template<typename T>
+template<typename T, int S>
 static void TossRogerDeclsToFiles(RogerNamespaceDeclList *input, RogerFileVector &output,
-    SmallVector<T*, 4> RogerNamespaceDeclList::* list_field, RogerRange T::* rangeField) {
-  SmallVector<T*, 4> &inputPart = input->*list_field;
+    SmallVector<T*, S> RogerNamespaceDeclList::* list_field, RogerRange T::* rangeField) {
+  SmallVector<T*, S> &inputPart = input->*list_field;
   RogerFileVector::iterator outputIt = output.begin();
   for (size_t i = 0; i < inputPart.size(); ++i) {
     T* item = inputPart[i];
@@ -617,11 +658,12 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   RogerParsingNamespace *topParsingNs = new RogerParsingNamespace;
 
-  TossRogerDeclsToFiles<RogerDeclaration>(definitionPart, files, &RogerNamespaceDeclList::NameDeclaration, &RogerDeclaration::range);
-  TossRogerDeclsToFiles<RogerClassDecl>(definitionPart, files, &RogerNamespaceDeclList::ClassDecl, &RogerClassDecl::declaration);
-  TossRogerDeclsToFiles<RogerNonType>(definitionPart, files, &RogerNamespaceDeclList::NonType, &RogerNonType::range);
-  TossRogerDeclsToFiles<RogerDeclaration>(definitionPart, files, &RogerNamespaceDeclList::Using, &RogerDeclaration::range);
-  TossRogerDeclsToFiles<RogerNonType>(definitionPart, files, &RogerNamespaceDeclList::UsingDir, &RogerNonType::range);
+  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::NameDeclaration, &RogerDeclaration::range);
+  TossRogerDeclsToFiles<RogerClassDecl, 4>(definitionPart, files, &RogerNamespaceDeclList::ClassDecl, &RogerClassDecl::declaration);
+  TossRogerDeclsToFiles<RogerEnumDecl, 0>(definitionPart, files, &RogerNamespaceDeclList::EnumDecl, &RogerEnumDecl::range);
+  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::NonType, &RogerNonType::range);
+  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::Using, &RogerDeclaration::range);
+  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::UsingDir, &RogerNonType::range);
   assert(definitionPart->Namespace.empty());
   //TossRogerDeclsToFiles<RogerNamespace>(definitionPart, files, &RogerNamespaceDeclList::Namespace, &RogerNamespace::range);
 
@@ -793,7 +835,7 @@ void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList
       return &declList->Namespace;
     }
     typedef RogerParsingNamespace ParsingState;
-    typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerDeclaration *, DeclContext *, RogerFile *, RogerParsingNamespace *), &Parser::ParseRogerDeclarationRegion> ParseNamedDeclaration;
+    typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerBlindParsable *, DeclContext *, RogerFile *, RogerParsingNamespace *), &Parser::ParseRogerDeclarationRegion> ParseNamedDeclaration;
   };
   //RogerNamespaceParseScope scope(this, file, DC, parsingNs);
   FillRogerDeclContextWithNames<TypesForRec>(rogerNsDeclList, DC, parsingNs, topLevelDecs, file);
@@ -836,7 +878,7 @@ void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl
       return 0;
     }
     typedef ParsingClass ParsingState;
-    typedef RogerLiteral<DeclGroupPtrTy (Parser::*)(RogerDeclaration*, Decl*, RogerFile *, ParsingClass *), &Parser::ParseRogerMemberRegion> ParseNamedDeclaration;
+    typedef RogerLiteral<DeclGroupPtrTy (Parser::*)(RogerBlindParsable*, Decl*, RogerFile *, ParsingClass *), &Parser::ParseRogerMemberRegion> ParseNamedDeclaration;
   };
 
   {
@@ -947,6 +989,51 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
     Diag(T, diag::err_roger_invalid_non_type_region)
       << getTokenSimpleSpelling(T.getKind());
   }
+
+  for (size_t i = 0; i < rogerDeclList->EnumDecl.size(); ++i) {
+    RogerEnumDecl *enumDecl = rogerDeclList->EnumDecl[i];
+
+    struct CallbackImpl : public RogerItemizedLateParseCallback {
+      Parser* parser;
+      RogerEnumDecl *enumDecl;
+      typename Types::DeclContext *DC;
+      RogerTopLevelDecls *topLevelDecs;
+      RogerFile *file;
+      RogerCallbackGuard guard;
+      bool isInUse;
+      typename Types::ParsingState *parsingObj;
+      CallbackImpl() : isInUse(false) {}
+      bool isBusy() {
+        return isInUse;
+      }
+      void parseDeferred() {
+        RogerCallbackInUseScope inUse(&isInUse);
+        guard.check();
+
+        DeclGroupPtrTy Result = (parser->*(Types::ParseNamedDeclaration::v))(enumDecl, DC, file, parsingObj);
+        if (topLevelDecs && Result) {
+          topLevelDecs->List.push_back(Result);
+        }
+      }
+    };
+
+    CallbackImpl *cb = new CallbackImpl();
+    cb->parser = this;
+    cb->enumDecl = enumDecl;
+    cb->DC = DC;
+    cb->parsingObj = parsingObj;
+    cb->topLevelDecs = topLevelDecs;
+    cb->file = file;
+
+
+    SmallVector<DeclarationName, 10> names;
+    names.push_back(DeclarationName(enumDecl->Toks[enumDecl->nameToken].getIdentifierInfo()));
+    for (size_t i = 0; i < enumDecl->inner.size(); ++i) {
+      names.push_back(DeclarationName(enumDecl->Toks[enumDecl->inner[i]].getIdentifierInfo()));
+    }
+    Actions.ActOnMultiNameDeclarationRoger(DC, ArrayRef<DeclarationName>(names), cb);
+  }
+
   if (SmallVector<RogerNamespace*, 4> *nsDeclList = Types::getNsDeclList(rogerDeclList)) {
     for (size_t i = 0; i < nsDeclList->size(); ++i) {
 
@@ -1111,22 +1198,22 @@ DeclContext *Parser::ParseRogerNamespaceHeader() {
 }
 
 
-Parser::DeclGroupPtrTy Parser::ParseRogerDeclarationRegion(RogerDeclaration *decl, DeclContext *DC, RogerFile *file, RogerParsingNamespace *parsingNs) {
-  RogerNestedTokensState parseNestedTokens(this, &decl->Toks[decl->range.begin], decl->range.size());
+Parser::DeclGroupPtrTy Parser::ParseRogerDeclarationRegion(RogerBlindParsable *decl, DeclContext *DC, RogerFile *file, RogerParsingNamespace *parsingNs) {
+  RogerNestedTokensState parseNestedTokens(this, &decl->rangeBegin(), decl->rangeSize());
   RogerNamespaceParseScope scope(this, file, DC, parsingNs);
 
   ParsedAttributesWithRange attrs(AttrFactory);
   return ParseExternalDeclaration(attrs);
 }
 
-Parser::DeclGroupPtrTy Parser::ParseRogerMemberRegion(RogerDeclaration *decl, Decl *RD, RogerFile *file, ParsingClass *parsingClass) {
-  RogerNestedTokensState parseNestedTokens(this, &decl->Toks[decl->range.begin], decl->range.size());
+Parser::DeclGroupPtrTy Parser::ParseRogerMemberRegion(RogerBlindParsable *decl, Decl *RD, RogerFile *file, ParsingClass *parsingClass) {
+  RogerNestedTokensState parseNestedTokens(this, &decl->rangeBegin(), decl->rangeSize());
   RogerRecordParseScope scope(this, file, RD, parsingClass);
 
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
-  AccessSpecifier AS = calculateAS(decl->visibility, dyn_cast<DeclContext>(RD));
+  AccessSpecifier AS = calculateAS(decl->getVisibility(), dyn_cast<DeclContext>(RD));
 
   ParsedAttributesWithRange attrs(AttrFactory);
   ParseCXXClassMemberDeclaration(AS, attrs.getList());
@@ -1624,7 +1711,7 @@ NamespaceDecl *Parser::GetOrParseRogerFileScope(RogerFile *file) {
   struct TypesForFileScopeNs {
     typedef DeclContext DeclContext;
     typedef RogerParsingNamespace ParsingState;
-    typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerDeclaration *, DeclContext *, RogerFile *, RogerParsingNamespace *), &Parser::ParseRogerDeclarationRegion> ParseNamedDeclaration;
+    typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerBlindParsable *, DeclContext *, RogerFile *, RogerParsingNamespace *), &Parser::ParseRogerDeclarationRegion> ParseNamedDeclaration;
   };
 
   FillRogerDeclContextWithNamedDecls<TypesForFileScopeNs>(file->inner.Using, Actions.CurContext, 0, 0, 0);

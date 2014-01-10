@@ -7571,6 +7571,7 @@ public:
 
   // Roger
   void ActOnNamedDeclarationRoger(DeclContext *DC, DeclarationName Name, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
+  void ActOnMultiNameDeclarationRoger(DeclContext *DC, ArrayRef<DeclarationName> Names, RogerItemizedLateParseCallback *callback);
   void ActOnConversionDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
   void ActOnConstructorDeclarationRoger(DeclContext *DC, bool isTemplateSpec, RogerItemizedLateParseCallback *callback);
   void ActOnDestructorDeclarationRoger(DeclContext *DC, RogerItemizedLateParseCallback *callback);

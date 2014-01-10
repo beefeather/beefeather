@@ -39,6 +39,15 @@ void Sema::ActOnNamedDeclarationRoger(DeclContext *DC, DeclarationName Name, boo
   DC->unparsedDecls.push_back(node);
 }
 
+void Sema::ActOnMultiNameDeclarationRoger(DeclContext *DC, ArrayRef<DeclarationName> Names, RogerItemizedLateParseCallback *callback) {
+  DeclContext::UnparsedMultiNameDecl *list = new DeclContext::UnparsedMultiNameDecl;
+  for (size_t i = 0; i < Names.size(); ++i) {
+    list->Names.push_back(Names[i]);
+  }
+  list->callback = callback;
+  DC->unparsedMutiNamedDecls.push_back(list);
+}
+
 static void AddRogerDeclarationToCurrentRecord(RogerItemizedLateParseCallback *callback, bool isTemplateSpec, DeclContext *dc, llvm::ilist<DeclContext::UnparsedNamedDecl> RecordDecl::RogerState::* field) {
   RecordDecl *rd = cast<RecordDecl>(dc);
   DeclContext::UnparsedNamedDecl *node = new DeclContext::UnparsedNamedDecl;
@@ -63,11 +72,16 @@ void Sema::ActOnNamespaceFinishRoger(DeclContext* ns, SmallVector<DeclGroupRef, 
   CompleteDeclContextRoger(ns, TopLevelList);
 }
 
-static void callParseDeferred(llvm::ilist<DeclContext::UnparsedNamedDecl> &todo) {
+static llvm::ilist<DeclContext::UnparsedMultiNameDecl> emptyMultinameList;
+static void callParseDeferred(llvm::ilist<DeclContext::UnparsedNamedDecl> &todo, llvm::ilist<DeclContext::UnparsedMultiNameDecl> &todoMulti = emptyMultinameList) {
   for (llvm::ilist<DeclContext::UnparsedNamedDecl>::iterator it = todo.begin(); it != todo.end(); ++it) {
     if (it->isTemplateSpec) {
       continue;
     }
+    it->callback->parseDeferred();
+    delete it->callback;
+  }
+  for (llvm::ilist<DeclContext::UnparsedMultiNameDecl>::iterator it = todoMulti.begin(); it != todoMulti.end(); ++it) {
     it->callback->parseDeferred();
     delete it->callback;
   }
@@ -105,7 +119,8 @@ void Sema::CompleteDeclContextRoger(DeclContext* ns, SmallVector<DeclGroupRef, 4
     }
     callParseDeferred(todo);
   }
-  callParseDeferred(unnamed);
+  callParseDeferred(unnamed, ns->unparsedMutiNamedDecls);
+
   if (RecordDecl *rec = dyn_cast<RecordDecl>(ns)) {
     MaterializeRogerContructors(rec);
     MaterializeRogerDestructors(rec);
@@ -228,6 +243,7 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
   }
 
   llvm::ilist<DeclContext::UnparsedNamedDecl> todo;
+  llvm::ilist<DeclContext::UnparsedMultiNameDecl> todoMulti;
 
   for (llvm::ilist<DeclContext::UnparsedNamedDecl>::iterator it = dc->unparsedDecls.begin(); it != dc->unparsedDecls.end();) {
     DeclContext::UnparsedNamedDecl &node = *it;
@@ -239,7 +255,24 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
       ++it;
     }
   }
-  if (!todo.size()) {
+  for (llvm::ilist<DeclContext::UnparsedMultiNameDecl>::iterator it = dc->unparsedMutiNamedDecls.begin(); it != dc->unparsedMutiNamedDecls.end();) {
+    DeclContext::UnparsedMultiNameDecl &node = *it;
+    bool matches = false;
+    for (size_t i = 0; i < node.Names.size(); ++i) {
+      if (node.Names[i] == Name) {
+        matches = true;
+        break;
+      }
+    }
+    if (matches) {
+      assert(!node.beingCompiled && "compile error with cyclic ref");
+      todoMulti.push_back(node);
+      dc->unparsedMutiNamedDecls.remove(it);
+    } else {
+      ++it;
+    }
+  }
+  if (!todo.size() && !todoMulti.size()) {
     return;
   }
   {
@@ -252,9 +285,9 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
     if (Redecl) {
       logScope.outs() << " for redeclaration";
     }
-    logScope.outs() << " " << todo.size() << " item(s)\n";
+    logScope.outs() << " " << todo.size() << "/" << todoMulti.size() << " item(s)\n";
 
-    callParseDeferred(todo);
+    callParseDeferred(todo, todoMulti);
   }
 }
 
