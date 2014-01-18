@@ -2345,7 +2345,7 @@ private:
   // Roger
 private:
 
-  void FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs);
+  void FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs);
   void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, RogerFile *file, ParsingClass *parsingClass);
   template<typename Types>
   void FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs, RogerFile *file);
@@ -2361,7 +2361,7 @@ private:
   template<void (LateParsedDeclaration::*parseMethod)(), RogerItemizedLateParseCallback * FunctionDecl::*callbackField>
   LateParsedDeclaration *CreateOnDemandLateParsedDeclaration(LateParsedDeclaration *LM, DeclContext *DC,
       Decl *ND, RogerFile *file);
-  DeclContext *ParseRogerNamespaceHeader();
+  DeclContext *ParseRogerNamespaceHeader(const char * &filePathPos);
 
 public:
   void PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *cd, RogerFile *file, int tokenOffset);

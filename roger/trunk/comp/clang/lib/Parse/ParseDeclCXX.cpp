@@ -2322,9 +2322,19 @@ void Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       else if (ThisDecl)
         Actions.AddInitializerToDecl(ThisDecl, Init.get(), EqualLoc.isInvalid(),
                                      DS.containsPlaceholderType());
-    } else if (ThisDecl && DS.getStorageClassSpec() == DeclSpec::SCS_static)
+    } else if (ThisDecl && DS.getStorageClassSpec() == DeclSpec::SCS_static) {
       // No initializer.
-      Actions.ActOnUninitializedDecl(ThisDecl, DS.containsPlaceholderType());
+      if (Actions.IsInRogerMode()) {
+        // Make ActOnUninitializedDecl deferred, as it may be of parent class type, which is
+        // not complete yet.
+        VarDecl *VD = cast<VarDecl>(ThisDecl);
+        // Late with no tokens means uninitialized.
+        LateParsedStaticVarInitializer *MI = new LateParsedStaticVarInitializer(this, VD, rogerParsingFile);
+        rogerParsingQueue->addAndWrap(MI, ThisDecl->getDeclContext(), rogerParsingFile);
+      } else {
+        Actions.ActOnUninitializedDecl(ThisDecl, DS.containsPlaceholderType());
+      }
+    }
 
     if (ThisDecl) {
       if (!ThisDecl->isInvalidDecl()) {

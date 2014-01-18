@@ -861,6 +861,8 @@ def err_roger_invalid_non_type_region : Error<
   "unrecognized (non-type) part: '%0' (Roger mode)">;
 def err_roger_invalid_region : Error<
   "unrecognized part <%0> (Roger overview parser)">;
+def err_roger_unexpected_in_class_file : Error<
+  "only a class name <%0> is expected at roger class source file">;
 
 
 } // end of Parser diagnostics

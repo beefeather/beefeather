@@ -8237,7 +8237,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
              diag::ext_aggregate_init_not_constant)
           << Init->getSourceRange();
     }
-  } else if (VDecl->isStaticDataMember() &&
+  } else if (!IsInRogerMode() && VDecl->isStaticDataMember() &&
              VDecl->getLexicalDeclContext()->isRecord()) {
     // This is an in-class initialization for a static data member, e.g.,
     //
@@ -8334,6 +8334,34 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
       VDecl->setInvalidDecl();
     }
   } else if (VDecl->isFileVarDecl()) {
+    if (VDecl->getStorageClass() == SC_Extern &&
+        (!getLangOpts().CPlusPlus ||
+         !(Context.getBaseElementType(VDecl->getType()).isConstQualified() ||
+           VDecl->isExternC())) &&
+        !isTemplateInstantiation(VDecl->getTemplateSpecializationKind()))
+      Diag(VDecl->getLocation(), diag::warn_extern_init);
+
+    // C99 6.7.8p4. All file scoped initializers need to be constant.
+    if (!getLangOpts().CPlusPlus && !VDecl->isInvalidDecl())
+      CheckForConstantInitializer(Init, DclT);
+    else if (VDecl->getTLSKind() == VarDecl::TLS_Static &&
+             !VDecl->isInvalidDecl() && !DclT->isDependentType() &&
+             !Init->isValueDependent() && !VDecl->isConstexpr() &&
+             !Init->isConstantInitializer(
+                 Context, VDecl->getType()->isReferenceType())) {
+      // GNU C++98 edits for __thread, [basic.start.init]p4:
+      //   An object of thread storage duration shall not require dynamic
+      //   initialization.
+      // FIXME: Need strict checking here.
+      Diag(VDecl->getLocation(), diag::err_thread_dynamic_init);
+      if (getLangOpts().CPlusPlus11)
+        Diag(VDecl->getLocation(), diag::note_use_thread_local);
+    }
+  } else if (IsInRogerMode() && VDecl->isStaticDataMember() &&
+      VDecl->getLexicalDeclContext()->isRecord()) {
+
+    // In Roger mode treat inclass statics like file vars.
+    // TODO: try to be more accurate.
     if (VDecl->getStorageClass() == SC_Extern &&
         (!getLangOpts().CPlusPlus ||
          !(Context.getBaseElementType(VDecl->getType()).isConstQualified() ||

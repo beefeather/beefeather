@@ -3164,7 +3164,7 @@ public:
 
   RogerState *rogerState;
 
-  bool isRogerRec() {
+  bool isRogerRec() const {
     return bool(rogerState);
   }
 

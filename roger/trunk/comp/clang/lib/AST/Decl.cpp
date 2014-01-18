@@ -1740,6 +1740,11 @@ VarDecl::DefinitionKind VarDecl::isThisDeclarationADefinition(
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
+    if (const RecordDecl *Rec = dyn_cast<RecordDecl>(getDeclContext())) {
+      if (Rec->isRogerRec()) {
+        return Definition;
+      }
+    }
     if (isOutOfLine() &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an

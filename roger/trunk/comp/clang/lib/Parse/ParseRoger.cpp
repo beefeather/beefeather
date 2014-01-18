@@ -51,7 +51,7 @@ struct RogerFile {
   RogerRange range;
   RogerNamespaceDeclList inner;
   NamespaceDecl *FileScopeNs;
-
+  std::string FileName;
   RogerFile() : FileScopeNs(0) {}
 };
 
@@ -613,6 +613,10 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
     return;
   }
 
+  SourceLocation capybaraLoc = Tok.getLocation();
+
+  //ConsumeToken();
+
   // Do we need it?
   struct MainCallback : Sema::RogerOnDemandParserInt {
     Parser *parser;
@@ -631,20 +635,54 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   RogerFileVector files;
 
-  while (true) {
-    RogerFile* file = new RogerFile;
+  {
+    FileID mainFileId = PP.getSourceManager().getMainFileID();
+    const FileEntry *mainFileEn = PP.getSourceManager().getFileEntryForID(mainFileId);
+    assert(mainFileEn);
+    llvm::error_code EC;
+    typedef llvm::sys::fs::recursive_directory_iterator
+      recursive_directory_iterator;
+    for (recursive_directory_iterator Entry(mainFileEn->getDir()->getName(), EC), End;
+         Entry != End && !EC; Entry.increment(EC)) {
 
-    ConsumeToken();
+      if (Entry->path() == mainFileEn->getName()) {
+        continue;
+      }
 
-    DeclContext *nsContext = ParseRogerNamespaceHeader();
-    file->nsContext = nsContext;
-    file->range.begin = Toks.size();
-    ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, Toks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
-    file->range.end = Toks.size();
-    files.push_back(file);
+      using llvm::StringSwitch;
+      // Check whether this entry has an extension typically associated with
+      // headers.
+      if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
+             .Cases(".cc", ".cpp", true)
+             .Default(false))
+        continue;
 
-    if (Tok.isNot(tok::kw_capybara)) {
-      break;
+      std::string relativePath = Entry->path().substr(strlen(mainFileEn->getDir()->getName()));
+
+      llvm::outs() << "File: " << Entry->path() << '\n';
+
+      const FileEntry *SourceFile = PP.getFileManager().getFile(Entry->path());
+      FileID FileID = PP.getSourceManager().createFileID(SourceFile, capybaraLoc, SrcMgr::C_User);
+      PP.EnterSourceFile(FileID, 0, capybaraLoc);
+
+      RogerFile* file = new RogerFile;
+
+      ConsumeToken();
+
+      const char *filePathPos = relativePath.data();
+      DeclContext *nsContext = ParseRogerNamespaceHeader(filePathPos);
+
+      assert(llvm::sys::path::is_separator(*filePathPos) && "Incorrect namespace");
+      ++filePathPos;
+
+      file->FileName = std::string(filePathPos);
+      assert(file->FileName == llvm::sys::path::filename(relativePath));
+
+      file->nsContext = nsContext;
+      file->range.begin = Toks.size();
+      ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, Toks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+      file->range.end = Toks.size();
+      files.push_back(file);
     }
   }
 
@@ -669,7 +707,7 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   for (size_t i = 0; i < files.size(); ++i) {
     RogerFile *file = files[i];
-    FillRogerNamespaceWithNames(&file->inner, file->nsContext, topParsingNs, file, &topLevelDecls);
+    FillRogerSourceFileWithNames(&file->inner, file->nsContext, topParsingNs, file, &topLevelDecls);
   }
 
   // Only finish topLevelDecls.
@@ -821,8 +859,46 @@ private:
   }
 };
 
-void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs) {
-  Sema::RogerLogScope logScope("FillRogerNamespaceWithNames");
+static std::string getExpectedClassName(std::string fileName) {
+  const StringRef shortName = llvm::sys::path::stem(fileName);
+  if (shortName.find('-') != StringRef::npos) {
+    return std::string();
+  }
+  return std::string(shortName);
+}
+
+void Parser::FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs) {
+
+  std::string expectedClassName = getExpectedClassName(file->FileName);
+
+  if (!expectedClassName.empty()) {
+    SourceLocation problemLoc;
+    if (!rogerNsDeclList->NonType.empty()) {
+      RogerNonType* nonType = rogerNsDeclList->NonType[0];
+      problemLoc = nonType->Toks[nonType->range.begin].getLocation();
+    } else if (!rogerNsDeclList->NameDeclaration.empty()) {
+      RogerDeclaration* decl = rogerNsDeclList->NameDeclaration[0];
+      problemLoc = decl->Toks[decl->range.begin].getLocation();
+    } else if (!rogerNsDeclList->EnumDecl.empty()) {
+      RogerEnumDecl* decl = rogerNsDeclList->EnumDecl[0];
+      problemLoc = decl->Toks[decl->range.begin].getLocation();
+    } else if (rogerNsDeclList->ClassDecl.size() > 1) {
+      RogerClassDecl *singleClass = rogerNsDeclList->ClassDecl[0];
+      IdentifierInfo *singleClassII = singleClass->Toks[singleClass->nameToken].getIdentifierInfo();
+      if (expectedClassName != singleClassII->getNameStart()) {
+        problemLoc = singleClass->Toks[singleClass->nameToken].getLocation();
+      } else {
+        RogerClassDecl* decl = rogerNsDeclList->ClassDecl[1];
+        problemLoc = decl->Toks[decl->nameToken].getLocation();
+      }
+    }
+
+    if (problemLoc.isValid()) {
+      Diag(problemLoc, diag::err_roger_unexpected_in_class_file) << expectedClassName;
+    }
+  }
+
+  Sema::RogerLogScope logScope("FillRogerSourceFileWithNames");
   if (NamedDecl *nd = dyn_cast<NamedDecl>(DC)) {
     nd->printName(logScope.outs_nl());
     logScope.outs() << '\n';
@@ -837,7 +913,6 @@ void Parser::FillRogerNamespaceWithNames(RogerNamespaceDeclList *rogerNsDeclList
     typedef RogerParsingNamespace ParsingState;
     typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerBlindParsable *, DeclContext *, RogerFile *, RogerParsingNamespace *), &Parser::ParseRogerDeclarationRegion> ParseNamedDeclaration;
   };
-  //RogerNamespaceParseScope scope(this, file, DC, parsingNs);
   FillRogerDeclContextWithNames<TypesForRec>(rogerNsDeclList, DC, parsingNs, topLevelDecs, file);
 
   struct CompleteParsingCb : RogerItemizedLateParseCallback {
@@ -1172,7 +1247,7 @@ void Parser::FillRogerDeclContextWithNamedDecls(SmallVector<RogerDeclaration*, 4
 }
 
 
-DeclContext *Parser::ParseRogerNamespaceHeader() {
+DeclContext *Parser::ParseRogerNamespaceHeader(const char * &filePathPos) {
   DeclContext *result = Actions.CurContext;
   if (Tok.isNot(tok::kw_namespace)) {
     return result;
@@ -1183,6 +1258,12 @@ DeclContext *Parser::ParseRogerNamespaceHeader() {
     if (Tok.isNot(tok::identifier)) {
       break;
     }
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+
+    assert(llvm::sys::path::is_separator(*filePathPos) && "Incorrect namespace");
+    ++filePathPos;
+    assert(strncmp(II->getNameStart(), filePathPos, II->getLength()) == 0 && "Incorrect namespace");
+    filePathPos += II->getLength();
     DeclContext *parent = result;
     result = Actions.ActOnRogerNamespaceHeaderPart(parent, Tok.getIdentifierInfo(), Tok.getLocation(), attrs.getList());
     ConsumeAnyToken();
@@ -1804,6 +1885,13 @@ void Parser::ParseLexedRogerStaticVarInitializer(LateParsedStaticVarInitializer:
 
   DeclContext *parent = ThisDecl->getDeclContext();
   RogerParseScope parseScope(this, cb->file, parent);
+
+  if (cb->Toks.empty()) {
+    // Roger hack.
+    bool containsPlaceholderType = false;
+    Actions.ActOnUninitializedDecl(ThisDecl, containsPlaceholderType);
+    return;
+  }
 
   RogerNestedTokensState parseNestedTokens(this, cb->Toks.begin(), cb->Toks.size());
 
