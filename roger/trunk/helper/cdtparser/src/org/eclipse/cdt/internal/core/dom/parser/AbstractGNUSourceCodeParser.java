@@ -91,7 +91,6 @@ import org.eclipse.cdt.core.parser.ParseError;
 import org.eclipse.cdt.core.parser.ParserMode;
 import org.eclipse.cdt.core.parser.util.CharArrayUtils;
 import org.eclipse.cdt.core.parser.util.CollectionUtils;
-import org.eclipse.cdt.internal.core.dom.rewrite.astwriter.DeclSpecWriter;
 import org.eclipse.cdt.internal.core.parser.scanner.ILocationResolver;
 
 /**
