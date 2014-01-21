@@ -164,20 +164,6 @@ void Sema::CompleteDeclRoger(Decl* D) {
   }
 }
 
-//void Sema::InstantiateFunctionDefinitionRoger(FunctionDecl *Function) {
-//  if (Function->isInvalidDecl())
-//    return;
-//
-//  if (Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
-//      !Function->getClassScopeSpecializationPattern())
-//    return;
-//
-//  assert(RogerOnDemandParser && "RogerOnDemandParser problemo");
-//  LateParsedTemplate *LPT = LateParsedTemplateMap.lookup(Function);
-//  assert(LPT && "missing LateParsedTemplate");
-//  RogerOnDemandParser->ParseFunction(*LPT);
-//}
-
 static void MaterializeRogerList(Sema &S, llvm::ilist<DeclContext::UnparsedNamedDecl> &list, DeclContext* dc) {
   if (dc->RogerNameFillCallback) {
     dc->RogerNameFillCallback->parseDeferred();
@@ -385,16 +371,6 @@ void Sema::ActOnFinishCXXMemberSpecificationRoger(RecordDecl *TagDecl) {
 
   // Make sure we work with templates!
   //AdjustDeclIfTemplate(TagDecl);
-
-//  for (const AttributeList* l = AttrList; l; l = l->getNext()) {
-//    if (l->getKind() != AttributeList::AT_Visibility)
-//      continue;
-//    l->setInvalid();
-//    Diag(l->getLoc(), diag::warn_attribute_after_definition_ignored) <<
-//      l->getName();
-//  }
-
-
 
   // Must reorder fields and methods!
   // Add private: and public: decls
@@ -669,23 +645,6 @@ void Sema::ActOnTagResumeDefinitionRoger(Scope *S, Decl *TagD) {
     rd->resumeDefinitionRoger();
   }
 
-  // Do we need it?
-  /*
-  if (rd) {
-    CXXRecordDecl *injectedDecl = 0;
-    for (DeclContext::decl_iterator it = rd->decls_begin(); it != rd->decls_end(); ++it) {
-      if (CXXRecordDecl *t = dyn_cast<CXXRecordDecl>(*it)) {
-        if (rd->getDeclName() == t->getDeclName()) {
-          injectedDecl = t;
-          break;
-        }
-      }
-    }
-    assert(injectedDecl);
-    PushOnScopeChains(injectedDecl, S);
-  }
-  */
-
   FieldCollector->StartClass();
 }
 
@@ -698,72 +657,6 @@ void Sema::RogerDefineRecord(CXXRecordDecl *decl) {
     RequireCompleteRecordRoger(decl, RRCR_INHERITANCE);
   }
 }
-
-//void Sema::ActOnPauseCXXMemberDeclarationsRoger(Scope *S, Decl *TagD) {
-//  AdjustDeclIfTemplate(TagD);
-//  CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
-//
-//  FieldCollector->StartClass();
-//
-//  if (!Record->getIdentifier())
-//    return;
-//
-//  if (FinalLoc.isValid())
-//    Record->addAttr(new (Context) FinalAttr(FinalLoc, Context));
-//
-//  // C++ [class]p2:
-//  //   [...] The class-name is also inserted into the scope of the
-//  //   class itself; this is known as the injected-class-name. For
-//  //   purposes of access checking, the injected-class-name is treated
-//  //   as if it were a public member name.
-//  CXXRecordDecl *InjectedClassName
-//    = CXXRecordDecl::Create(Context, Record->getTagKind(), CurContext,
-//                            Record->getLocStart(), Record->getLocation(),
-//                            Record->getIdentifier(),
-//                            /*PrevDecl=*/0,
-//                            /*DelayTypeCreation=*/true);
-//  Context.getTypeDeclType(InjectedClassName, Record);
-//  InjectedClassName->setImplicit();
-//  InjectedClassName->setAccess(AS_public);
-//  if (ClassTemplateDecl *Template = Record->getDescribedClassTemplate())
-//      InjectedClassName->setDescribedClassTemplate(Template);
-//  PushOnScopeChains(InjectedClassName, S);
-//  assert(InjectedClassName->isInjectedClassName() &&
-//         "Broken injected-class-name");
-//}
-//
-//void Sema::ActOnResumeCXXMemberDeclarationsRoger(Scope *S, Decl *TagD) {
-//  AdjustDeclIfTemplate(TagD);
-//  CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
-//
-//  FieldCollector->StartClass();
-//
-//  if (!Record->getIdentifier())
-//    return;
-//
-//  if (FinalLoc.isValid())
-//    Record->addAttr(new (Context) FinalAttr(FinalLoc, Context));
-//
-//  // C++ [class]p2:
-//  //   [...] The class-name is also inserted into the scope of the
-//  //   class itself; this is known as the injected-class-name. For
-//  //   purposes of access checking, the injected-class-name is treated
-//  //   as if it were a public member name.
-//  CXXRecordDecl *InjectedClassName
-//    = CXXRecordDecl::Create(Context, Record->getTagKind(), CurContext,
-//                            Record->getLocStart(), Record->getLocation(),
-//                            Record->getIdentifier(),
-//                            /*PrevDecl=*/0,
-//                            /*DelayTypeCreation=*/true);
-//  Context.getTypeDeclType(InjectedClassName, Record);
-//  InjectedClassName->setImplicit();
-//  InjectedClassName->setAccess(AS_public);
-//  if (ClassTemplateDecl *Template = Record->getDescribedClassTemplate())
-//      InjectedClassName->setDescribedClassTemplate(Template);
-//  PushOnScopeChains(InjectedClassName, S);
-//  assert(InjectedClassName->isInjectedClassName() &&
-//         "Broken injected-class-name");
-//}
 
 void Sema::RogerDefineFunction(const FunctionDecl *FunDecl) {
   RogerLogScope logScope("RogerDefineFunction");

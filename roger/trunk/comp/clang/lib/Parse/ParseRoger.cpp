@@ -383,7 +383,7 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
   {
     const char* executableName = "/home/peter/clang-roger/cdt-hack/parse_overview";
     StringRef Executable(executableName);
-    SmallVector<const char*, 128> Argv;
+    SmallVector<const char*, 5> Argv;
     Argv.push_back(executableName);
     Argv.push_back(tokensFileName);
     Argv.push_back(overviewFileName);
@@ -1114,39 +1114,6 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
 
       // Old code.
       assert(false);
-
-//      RogerNamespace *ns = (*nsDeclList)[i];
-//      Token &nameTok = ns->Toks[ns->nameToken];
-//      IdentifierInfo *II = nameTok.getIdentifierInfo();
-//      ParsedAttributesWithRange attrs(AttrFactory);
-//      struct Callback : RogerItemizedLateParseCallback {
-//        Parser *parser;
-//        RogerNamespace *ns;
-//        DeclContext *dc;
-//        RogerTopLevelDecls *topLevelDecs;
-//        RogerFile *file;
-//        RogerCallbackGuard guard;
-//        bool isInUse;
-//        Callback() : isInUse(false) {}
-//        bool isBusy() {
-//          return isInUse;
-//        }
-//        void parseDeferred() {
-//          RogerCallbackInUseScope inUse(&isInUse);
-//          parser->FillRogerNamespaceWithNames(&ns->inner, dc, new RogerParsingNamespace, file, 0);
-//        }
-//      };
-//      Callback *cb = new Callback();
-//      cb->parser = this;
-//      cb->ns = ns;
-//      cb->topLevelDecs = topLevelDecs;
-//      NamespaceDecl *nsDc = Actions.ActOnRogerNamespaceDef(getCurScope(), II, nameTok.getLocation(), cb, attrs.getList());
-//      cb->dc = nsDc;
-//      cb->file = file;
-//
-//      if (topLevelDecs) {
-//        topLevelDecs->List.push_back(Actions.ConvertDeclToDeclGroup(nsDc));
-//      }
     }
   }
 }
@@ -1655,22 +1622,6 @@ Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl, RogerFile *f
     }
   }
 
-  //  assert(Tok.is(tok::identifier));
-//  IdentifierInfo *Name = Tok.getIdentifierInfo();
-//  SourceLocation NameLoc = ConsumeToken();
-//
-//  CXXScopeSpec emptyScopeSpec;
-//  ParsedAttributesWithRange attrs(AttrFactory);
-//
-//  MultiTemplateParamsArg TParams;
-//  if (TemplateInfo.TemplateParams)
-//    TParams =
-//      MultiTemplateParamsArg(&(*TemplateInfo.TemplateParams)[0], TemplateInfo.TemplateParams->size());
-
-
-//  bool OwnedDecl;
-//  bool IsDependent = false;
-//  assert(!IsDependent && "Don't understand");
   if (TagOrTempResult.isInvalid()) {
     return 0;
   }
@@ -1812,23 +1763,6 @@ NamespaceDecl *Parser::GetOrParseRogerFileScope(RogerFile *file) {
 
   return NsD;
 }
-
-//void Parser::RogerCompleteNamespaceParsing(DeclContext *DC, RogerParsingNamespace *parsingNs) {
-//  DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(TemplateIds, TemplateIdsBeingCovered);
-//  ParenBraceBracketBalancer BalancerRAIIObj(*this);
-//
-//  RogerParseScope scope(this, DC);
-//
-//  for (size_t i = 0; i < parsingNs->LateParsedDeclarations.size(); ++i) {
-//    LateParsedDeclaration *lateDecl = parsingNs->LateParsedDeclarations[i];
-//    lateDecl->ParseLexedMethodDeclarations();
-//    lateDecl->ParseLexedMethodDefs();
-//    lateDecl->ParseRogerLexedStaticInitializers();
-//    delete lateDecl;
-//  }
-//
-//  delete parsingNs;
-//}
 
 struct Parser::LateParsedStaticVarInitializer::Callback : RogerItemizedLateParseCallback {
   CachedTokens Toks;
