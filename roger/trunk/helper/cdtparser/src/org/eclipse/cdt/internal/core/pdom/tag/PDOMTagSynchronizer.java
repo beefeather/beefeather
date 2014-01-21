@@ -20,7 +20,7 @@ import org.eclipse.cdt.core.dom.ast.tag.ITag;
 import org.eclipse.cdt.internal.core.pdom.db.BTree;
 import org.eclipse.cdt.internal.core.pdom.db.Database;
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeVisitor;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * An implementation utility for synchronizing the tags between source and destination nodes.

@@ -21,7 +21,7 @@ import org.eclipse.cdt.internal.core.index.IIndexFragment;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentFile;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentInclude;
 import org.eclipse.cdt.internal.core.pdom.db.Database;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @author Doug Schaefer

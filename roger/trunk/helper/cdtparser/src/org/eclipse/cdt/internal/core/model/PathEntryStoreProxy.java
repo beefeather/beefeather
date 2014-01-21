@@ -25,7 +25,7 @@ import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
 import org.eclipse.cdt.internal.core.settings.model.AbstractCExtensionProxy;
 import org.eclipse.cdt.internal.core.settings.model.ConfigBasedPathEntryStore;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class PathEntryStoreProxy extends AbstractCExtensionProxy implements IPathEntryStore, IPathEntryStoreListener {
 	private List<IPathEntryStoreListener> fListeners;

@@ -19,7 +19,7 @@ import org.eclipse.cdt.internal.core.dom.parser.ITypeMarshalBuffer;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents the type of a dependent expression.

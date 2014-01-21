@@ -32,7 +32,7 @@ import org.eclipse.cdt.internal.core.pdom.dom.PDOMBinding;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMNode;
 import org.eclipse.cdt.internal.core.pdom.dom.c.PDOMCAnnotation;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Binding for function specialization in the index. 

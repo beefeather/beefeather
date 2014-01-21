@@ -11,6 +11,138 @@ import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Ope
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.DeclarationName.Plain;
 
 class OverviewWriter {
+  interface File {
+	  <T> T accept(Visitor<T> visitor);
+	  interface Visitor<T> {
+		  T visitData(DataFile dataFile);
+		  T visitError(ErrorFile errorFile);
+	  }
+  }
+  
+  interface DataFile extends File {
+	  List<? extends Region> regions();
+  }
+  
+  interface ErrorFile extends File {
+	  String message();
+  }
+  
+  interface Region {
+	  <T> T accept(Visitor<T> visitor);
+	  interface Visitor<T> {
+		  T visitNonType(NonTypeRegion nonTypeRegion);
+		  T visitDeclaration(DeclarationRegion declarationRegion);
+		  T visitClass(ClassRegion classRegion);
+          T visitFunction(FunctionRegion functionRegion);
+          T visitNamespace(NamespaceRegion namespaceRegion);
+          T visitUsing(UsingRegion usingRegion);
+          T visitEnum(EnumRegion enumRegion);
+          T visitError(ErrorRegion errorRegion);
+	  }
+  }
+  
+  interface NonTypeRegion extends Region {
+	  Integer visibility();
+	  TokenRange range();
+  }
+  
+  interface DeclarationRegion extends Region {
+	  Integer visibility();
+	  // null means unnamed, means template instantiation.
+	  Integer nameToken();
+	  TokenRange declaration();
+	  boolean isTemplateSecondary();
+  }
+  
+  interface FunctionRegion extends Region {
+	  Integer visibility();
+	  DeclarationName name();
+	  TokenRange declaration();
+	  boolean isTemplateSecondary();
+  }
+
+  interface ClassRegion extends Region {
+	  Integer visibility();
+	  int nameToken();
+	  boolean isTemplate();
+	  TokenRange declaration();
+	  TokenRange classTokens();
+	  List<? extends Region> innerRegions();
+	  boolean isTemplateSecondary();
+  }
+  
+  interface NamespaceRegion extends Region {
+	  int nameToken();
+	  List<? extends Region> innerRegions();
+  }
+  
+  interface UsingRegion extends Region {
+	  Integer visibility();
+	  DeclarationName name();
+	  TokenRange declaration();
+  }
+  interface EnumRegion extends Region {
+	  int nameToken();
+	  Integer visibility();
+	  List<? extends Integer> elementNames(); 
+	  TokenRange declaration();
+  }
+  
+  interface ErrorRegion extends Region {
+	  TokenRange declaration();
+	  String errorMessage();
+	  
+	  class Impl implements ErrorRegion {
+		private final String message;
+		private final TokenRange range;
+		
+		public Impl(String message, TokenRange range) {
+			this.message = message;
+			this.range = range;
+		}
+		
+		@Override public <T> T accept(Visitor<T> visitor) {
+			return visitor.visitError(this);
+		}
+		@Override public TokenRange declaration() {
+			return range;
+		}
+		@Override public String errorMessage() {
+			return message;
+		}
+	  }
+  }
+
+  interface DeclarationName {
+	  interface Plain extends DeclarationName {
+		  int token();
+	  }
+	  interface Operator extends DeclarationName {
+		  int codeToken();
+		  boolean isArray();
+	  }
+	  interface Conversion extends DeclarationName {
+	  }
+	  interface Constructor extends DeclarationName {
+	  }
+	  interface Destructor extends DeclarationName {
+	  }
+	  
+	  interface Visitor<R> {
+		  R visitPlain(Plain plain);
+		  R visitOpeartor(Operator operator);
+		  R visitConversion(Conversion conversion);
+		  R visitConstructor(Constructor constructor);
+		  R visitDestructor(Destructor destructor);
+	  }
+	  <R> R accept(Visitor<R> visitor);
+  }
+  
+  interface TokenRange {
+	  int start();
+	  int end();
+  }
+
   static void write(File data, final OutputStream output) {
 	class Recursion {
 		void go(File file) {
@@ -250,137 +382,5 @@ class OverviewWriter {
 		}
 	}
 	new Recursion().go(data);
-  }
-  
-  interface File {
-	  <T> T accept(Visitor<T> visitor);
-	  interface Visitor<T> {
-		  T visitData(DataFile dataFile);
-		  T visitError(ErrorFile errorFile);
-	  }
-  }
-  
-  interface DataFile extends File {
-	  List<? extends Region> regions();
-  }
-  
-  interface ErrorFile extends File {
-	  String message();
-  }
-  
-  interface Region {
-	  <T> T accept(Visitor<T> visitor);
-	  interface Visitor<T> {
-		  T visitNonType(NonTypeRegion nonTypeRegion);
-		  T visitDeclaration(DeclarationRegion declarationRegion);
-		  T visitClass(ClassRegion classRegion);
-          T visitFunction(FunctionRegion functionRegion);
-          T visitNamespace(NamespaceRegion namespaceRegion);
-          T visitUsing(UsingRegion usingRegion);
-          T visitEnum(EnumRegion enumRegion);
-          T visitError(ErrorRegion errorRegion);
-	  }
-  }
-  
-  interface NonTypeRegion extends Region {
-	  Integer visibility();
-	  TokenRange range();
-  }
-  
-  interface DeclarationRegion extends Region {
-	  Integer visibility();
-	  // null means unnamed, means template instantiation.
-	  Integer nameToken();
-	  TokenRange declaration();
-	  boolean isTemplateSecondary();
-  }
-  
-  interface FunctionRegion extends Region {
-	  Integer visibility();
-	  DeclarationName name();
-	  TokenRange declaration();
-	  boolean isTemplateSecondary();
-  }
-
-  interface ClassRegion extends Region {
-	  Integer visibility();
-	  int nameToken();
-	  boolean isTemplate();
-	  TokenRange declaration();
-	  TokenRange classTokens();
-	  List<? extends Region> innerRegions();
-	  boolean isTemplateSecondary();
-  }
-  
-  interface NamespaceRegion extends Region {
-	  int nameToken();
-	  List<? extends Region> innerRegions();
-  }
-  
-  interface UsingRegion extends Region {
-	  Integer visibility();
-	  DeclarationName name();
-	  TokenRange declaration();
-  }
-  interface EnumRegion extends Region {
-	  int nameToken();
-	  Integer visibility();
-	  List<? extends Integer> elementNames(); 
-	  TokenRange declaration();
-  }
-  
-  interface ErrorRegion extends Region {
-	  TokenRange declaration();
-	  String errorMessage();
-	  
-	  class Impl implements ErrorRegion {
-		private final String message;
-		private final TokenRange range;
-		
-		public Impl(String message, TokenRange range) {
-			this.message = message;
-			this.range = range;
-		}
-		
-		@Override public <T> T accept(Visitor<T> visitor) {
-			return visitor.visitError(this);
-		}
-		@Override public TokenRange declaration() {
-			return range;
-		}
-		@Override public String errorMessage() {
-			return message;
-		}
-	  }
-  }
-
-  interface DeclarationName {
-	  interface Plain extends DeclarationName {
-		  int token();
-	  }
-	  interface Operator extends DeclarationName {
-		  int codeToken();
-		  boolean isArray();
-	  }
-	  interface Conversion extends DeclarationName {
-	  }
-	  interface Constructor extends DeclarationName {
-	  }
-	  interface Destructor extends DeclarationName {
-	  }
-	  
-	  interface Visitor<R> {
-		  R visitPlain(Plain plain);
-		  R visitOpeartor(Operator operator);
-		  R visitConversion(Conversion conversion);
-		  R visitConstructor(Constructor constructor);
-		  R visitDestructor(Destructor destructor);
-	  }
-	  <R> R accept(Visitor<R> visitor);
-  }
-  
-  interface TokenRange {
-	  int start();
-	  int end();
   }
 }

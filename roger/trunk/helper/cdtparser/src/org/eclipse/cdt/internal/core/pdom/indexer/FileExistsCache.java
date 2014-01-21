@@ -22,7 +22,7 @@ import java.util.Map;
 import org.eclipse.cdt.utils.UNCPathConverter;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * A cache for checking whether a file exists. The cache shall be used for a limited amount of time, only (e.g. one 

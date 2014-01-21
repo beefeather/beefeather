@@ -18,7 +18,7 @@ import org.eclipse.cdt.core.index.IIndexFile;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPUnknownMethod;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentBinding;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CompositeCPPUnknownMethod extends CPPUnknownMethod implements IIndexBinding {
 	public CompositeCPPUnknownMethod(IType owner, char[] name) {

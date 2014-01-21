@@ -13,7 +13,7 @@
 package org.eclipse.cdt.core.dom;
 
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for all nodes that can be visited by a {@link IPDOMVisitor}.

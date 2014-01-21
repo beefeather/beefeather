@@ -33,7 +33,7 @@ import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.cdt.core.resources.ResourcesUtil;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;

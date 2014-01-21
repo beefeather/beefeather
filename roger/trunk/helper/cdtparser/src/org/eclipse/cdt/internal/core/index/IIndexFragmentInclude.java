@@ -11,7 +11,7 @@
 package org.eclipse.cdt.internal.core.index;
 
 import org.eclipse.cdt.core.index.IIndexInclude;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IIndexFragmentInclude extends IIndexInclude {
 	/**

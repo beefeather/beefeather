@@ -19,7 +19,7 @@ import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.cdt.core.index.IIndexLocationConverter;
 import org.eclipse.cdt.core.model.LanguageManager;
 import org.eclipse.cdt.internal.core.pdom.PDOM;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 /**

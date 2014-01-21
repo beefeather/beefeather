@@ -20,7 +20,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPUnknownClassInstance;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPUnknownTypeScope;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CompositeCPPUnknownMemberClassInstance extends CPPUnknownClassInstance implements IIndexBinding {
 	public CompositeCPPUnknownMemberClassInstance(IType owner, char[] name, ICPPTemplateArgument[] arguments) {

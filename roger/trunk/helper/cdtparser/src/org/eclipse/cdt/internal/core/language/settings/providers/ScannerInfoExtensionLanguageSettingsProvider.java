@@ -29,7 +29,7 @@ import org.eclipse.cdt.core.settings.model.ICSettingEntry;
 import org.eclipse.cdt.core.settings.model.util.CDataUtil;
 import org.eclipse.cdt.core.settings.model.util.CExtensionUtil;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 
 /**

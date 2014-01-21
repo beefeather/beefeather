@@ -34,7 +34,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceProxy;
 import org.eclipse.core.resources.IResourceProxyVisitor;
 import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.osgi.framework.Version;
 import org.w3c.dom.Element;

@@ -12,7 +12,7 @@ package org.eclipse.cdt.core.dom.ast;
 
 import org.eclipse.cdt.core.index.IIndexFile;
 import org.eclipse.cdt.core.parser.ISignificantMacros;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for constructs that nominate a file for an AST:

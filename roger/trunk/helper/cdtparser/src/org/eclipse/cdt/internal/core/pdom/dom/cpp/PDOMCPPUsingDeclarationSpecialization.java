@@ -26,7 +26,7 @@ import org.eclipse.cdt.internal.core.pdom.db.PDOMNodeLinkedList;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMBinding;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMNode;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 class PDOMCPPUsingDeclarationSpecialization extends PDOMCPPSpecialization implements ICPPUsingDeclaration {
 	private static final int TARGET_BINDINGS = PDOMCPPSpecialization.RECORD_SIZE;

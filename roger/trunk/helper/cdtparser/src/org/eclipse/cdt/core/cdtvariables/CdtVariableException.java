@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core.cdtvariables;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IStatus;
 
 /**

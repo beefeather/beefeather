@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core.index.provider;
 import org.eclipse.cdt.core.index.provider.IIndexProvider;
 import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
 import org.eclipse.cdt.internal.core.index.IIndexFragment;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * The ICProject IIndex is a logical index composed of potentially many

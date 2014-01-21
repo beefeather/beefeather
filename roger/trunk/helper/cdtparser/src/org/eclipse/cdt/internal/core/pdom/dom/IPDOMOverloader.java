@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.internal.core.pdom.dom;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for any element in the PDOM that can have the same name as

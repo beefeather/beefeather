@@ -14,7 +14,7 @@ package org.eclipse.cdt.internal.core.pdom.db;
 
 import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.cdt.core.parser.util.CharArrayUtils;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This is for strings that fit inside a single chunk.

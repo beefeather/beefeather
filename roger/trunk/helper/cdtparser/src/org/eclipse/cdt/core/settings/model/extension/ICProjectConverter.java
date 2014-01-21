@@ -13,7 +13,7 @@ package org.eclipse.cdt.core.settings.model.extension;
 import org.eclipse.cdt.core.settings.model.ICProjectDescription;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface ICProjectConverter {
 	ICProjectDescription convertProject(IProject project, IProjectDescription eclipseProjDes, String oldOwnerId, ICProjectDescription des) throws CoreException;

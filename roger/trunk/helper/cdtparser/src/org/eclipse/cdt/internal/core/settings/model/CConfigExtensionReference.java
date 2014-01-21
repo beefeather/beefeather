@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core.settings.model;
 import org.eclipse.cdt.core.settings.model.ICConfigExtensionReference;
 import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
 import org.eclipse.cdt.internal.core.CExtensionInfo;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CConfigExtensionReference implements ICConfigExtensionReference {
 

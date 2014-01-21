@@ -97,7 +97,7 @@ import org.eclipse.cdt.internal.core.index.composite.AbstractCompositeFactory;
 import org.eclipse.cdt.internal.core.index.composite.CompositeMacroContainer;
 import org.eclipse.cdt.internal.core.index.composite.CompositingNotImplementedError;
 import org.eclipse.cdt.internal.core.index.composite.ICompositesFactory;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CPPCompositesFactory extends AbstractCompositeFactory {
 

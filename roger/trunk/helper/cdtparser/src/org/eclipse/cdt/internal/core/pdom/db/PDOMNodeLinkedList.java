@@ -15,7 +15,7 @@ package org.eclipse.cdt.internal.core.pdom.db;
 import org.eclipse.cdt.core.dom.IPDOMVisitor;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMNode;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents a linked list of PDOMNode records

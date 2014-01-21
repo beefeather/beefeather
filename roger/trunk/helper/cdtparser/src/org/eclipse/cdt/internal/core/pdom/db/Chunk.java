@@ -16,7 +16,7 @@ package org.eclipse.cdt.internal.core.pdom.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Caches the content of a piece of the database.

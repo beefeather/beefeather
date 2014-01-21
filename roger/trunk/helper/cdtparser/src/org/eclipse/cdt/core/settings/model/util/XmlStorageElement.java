@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.cdt.core.settings.model.ICStorageElement;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;

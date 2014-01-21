@@ -27,7 +27,7 @@ import org.eclipse.cdt.internal.core.index.IWritableIndexFragment;
 import org.eclipse.cdt.internal.core.pdom.IndexerProgress;
 import org.eclipse.cdt.internal.core.pdom.PDOMWriter;
 import org.eclipse.cdt.internal.core.pdom.WritablePDOM;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 /**

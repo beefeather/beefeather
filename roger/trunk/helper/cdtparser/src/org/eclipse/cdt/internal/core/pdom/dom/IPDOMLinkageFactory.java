@@ -12,7 +12,7 @@
 package org.eclipse.cdt.internal.core.pdom.dom;
 
 import org.eclipse.cdt.internal.core.pdom.PDOM;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @author Doug Schaefer

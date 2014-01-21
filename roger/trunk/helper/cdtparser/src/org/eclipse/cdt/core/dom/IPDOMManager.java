@@ -12,7 +12,7 @@
 package org.eclipse.cdt.core.dom;
 
 import org.eclipse.cdt.core.model.ICProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @noextend This interface is not intended to be extended by clients.

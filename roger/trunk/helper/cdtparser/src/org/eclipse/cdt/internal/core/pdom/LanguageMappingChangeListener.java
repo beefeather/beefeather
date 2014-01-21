@@ -20,7 +20,7 @@ import org.eclipse.cdt.core.model.ILanguageMappingChangeEvent;
 import org.eclipse.cdt.core.model.ILanguageMappingChangeListener;
 import org.eclipse.cdt.internal.core.model.CModelManager;
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @author crecoskie

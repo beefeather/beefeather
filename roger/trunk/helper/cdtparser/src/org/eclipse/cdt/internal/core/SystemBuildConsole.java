@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core;
 import org.eclipse.cdt.core.ConsoleOutputStream;
 import org.eclipse.cdt.core.resources.IConsole;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 
 /**

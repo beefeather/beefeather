@@ -26,8 +26,9 @@ import org.eclipse.cdt.internal.core.dom.parser.ISerializableType;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeContainer;
 import org.eclipse.cdt.internal.core.dom.parser.ITypeMarshalBuffer;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPVisitor;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.PlatformObject;
+
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public class CPPAliasTemplateInstance extends PlatformObject
 		implements ICPPAliasTemplateInstance, ITypeContainer, ISerializableType {

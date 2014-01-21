@@ -33,7 +33,7 @@ import org.eclipse.cdt.core.settings.model.util.CDataUtil;
 import org.eclipse.cdt.core.settings.model.util.EntryContentsKey;
 import org.eclipse.cdt.core.settings.model.util.KindBasedStore;
 import org.eclipse.cdt.internal.core.settings.model.CExternalSettinsDeltaCalculator.ExtSettingsDelta;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Responsible for applying external settings delta to a given ICConfigurationDescrptions

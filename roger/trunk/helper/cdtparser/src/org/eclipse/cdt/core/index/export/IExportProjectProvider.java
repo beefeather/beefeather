@@ -16,7 +16,7 @@ import org.eclipse.cdt.core.index.IIndexLocationConverter;
 import org.eclipse.cdt.core.index.ResourceContainerRelativeLocationConverter;
 import org.eclipse.cdt.core.index.URIRelativeLocationConverter;
 import org.eclipse.cdt.core.model.ICProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.Platform;
 
 /**

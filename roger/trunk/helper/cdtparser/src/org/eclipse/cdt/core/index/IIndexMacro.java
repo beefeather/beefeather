@@ -12,7 +12,7 @@ package org.eclipse.cdt.core.index;
 
 import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
 import org.eclipse.cdt.core.dom.ast.IMacroBinding;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents a macro stored in the index. 

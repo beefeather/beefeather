@@ -38,7 +38,7 @@ import org.eclipse.cdt.core.settings.model.util.PathEntryTranslator.ReferenceSet
 import org.eclipse.cdt.internal.core.model.CModelManager;
 import org.eclipse.cdt.internal.core.model.PathEntryManager;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.QualifiedName;
 

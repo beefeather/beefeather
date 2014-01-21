@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core.model;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This interface is implemented by clients that walk the ICElement tree.

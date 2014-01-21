@@ -12,8 +12,8 @@ package org.eclipse.cdt.core;
 
 import org.eclipse.cdt.core.settings.model.ICConfigExtensionReference;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.PlatformObject;
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public abstract class AbstractCExtension extends PlatformObject implements ICExtension {
 	private IProject fProject;

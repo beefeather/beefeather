@@ -11,7 +11,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.internal.core.pdom.db;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This is a list item. It contains a next and prev pointer

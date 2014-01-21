@@ -33,11 +33,11 @@ import org.eclipse.cdt.core.model.IWorkingCopy;
 import org.eclipse.cdt.internal.core.util.MementoTokenizer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourceAttributes;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.PlatformObject;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 public abstract class CElement extends PlatformObject implements ICElement {
 	public static final char CEM_ESCAPE = '\\';
@@ -62,7 +62,7 @@ public abstract class CElement extends PlatformObject implements ICElement {
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.core.runtime.PlatformObject#getAdapter(java.lang.Class)
+	 * @see ru.spb.rybin.eclipsereplacement.PlatformObject#getAdapter(java.lang.Class)
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override

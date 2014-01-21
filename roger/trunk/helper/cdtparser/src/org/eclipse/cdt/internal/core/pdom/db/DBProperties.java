@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core.pdom.db;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * DBProperties is a bare-bones implementation of a String->String mapping. It is neither

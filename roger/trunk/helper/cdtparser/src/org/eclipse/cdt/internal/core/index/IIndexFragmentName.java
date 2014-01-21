@@ -12,7 +12,7 @@
 package org.eclipse.cdt.internal.core.index;
 
 import org.eclipse.cdt.core.index.IIndexName;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IIndexFragmentName extends IIndexName {
 	public static final IIndexFragmentName[] EMPTY_NAME_ARRAY = {};

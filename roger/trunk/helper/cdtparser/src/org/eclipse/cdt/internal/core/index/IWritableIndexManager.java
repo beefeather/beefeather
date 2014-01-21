@@ -12,7 +12,7 @@ package org.eclipse.cdt.internal.core.index;
 
 import org.eclipse.cdt.core.index.IIndexManager;
 import org.eclipse.cdt.core.model.ICProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IWritableIndexManager extends IIndexManager {
 	/**

@@ -12,7 +12,7 @@
 package org.eclipse.cdt.internal.core.settings.model;
 
 import org.eclipse.cdt.core.settings.model.ICStorageElement;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Implementation of ICStorageElement which wraps another ICStorageElement

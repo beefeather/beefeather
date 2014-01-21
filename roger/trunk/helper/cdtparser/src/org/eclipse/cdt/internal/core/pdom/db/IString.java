@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.internal.core.pdom.db;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for strings stored in the database. There is more than one string

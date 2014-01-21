@@ -25,7 +25,7 @@ import org.eclipse.cdt.internal.core.dom.Linkage;
 import org.eclipse.cdt.internal.core.dom.parser.ASTEnumerator;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.Value;
-import org.eclipse.core.runtime.PlatformObject;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 /**
  * C-specific binding for enumerators.

@@ -14,7 +14,7 @@ package org.eclipse.cdt.internal.core.settings.model.xml;
 import org.eclipse.cdt.core.settings.model.ICSettingsStorage;
 import org.eclipse.cdt.core.settings.model.ICStorageElement;
 import org.eclipse.cdt.internal.core.settings.model.ExceptionFactory;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.w3c.dom.Element;
 
 /**

@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core.index;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Interface for an include directive stored in the index.

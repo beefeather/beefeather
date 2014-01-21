@@ -24,7 +24,7 @@ import org.eclipse.cdt.internal.core.index.DefaultFragmentBindingComparator;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentBinding;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentBindingComparator;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMFragmentBindingComparator;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Commonality between composite factories

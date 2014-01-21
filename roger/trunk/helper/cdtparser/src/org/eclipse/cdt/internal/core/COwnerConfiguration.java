@@ -11,7 +11,7 @@
 package org.eclipse.cdt.internal.core;
 
 import org.eclipse.cdt.core.ICOwner;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 
 public class COwnerConfiguration {

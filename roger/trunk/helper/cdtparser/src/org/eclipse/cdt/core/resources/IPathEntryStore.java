@@ -13,7 +13,7 @@ package org.eclipse.cdt.core.resources;
 
 import org.eclipse.cdt.core.ICExtension;
 import org.eclipse.cdt.core.model.IPathEntry;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * IPathEntryStore

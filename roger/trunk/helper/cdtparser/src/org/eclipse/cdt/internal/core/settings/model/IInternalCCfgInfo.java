@@ -12,7 +12,7 @@ package org.eclipse.cdt.internal.core.settings.model;
 
 import org.eclipse.cdt.core.settings.model.WriteAccessException;
 import org.eclipse.cdt.core.settings.model.extension.CConfigurationData;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IInternalCCfgInfo {
 	CConfigurationSpecSettings getSpecSettings() throws CoreException;

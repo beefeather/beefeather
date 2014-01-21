@@ -13,7 +13,7 @@
 package org.eclipse.cdt.internal.core.index;
 
 import org.eclipse.cdt.core.index.IIndexFile;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IIndexFragmentFile extends IIndexFile {
 	IIndexFragmentFile[] EMPTY_ARRAY = {};

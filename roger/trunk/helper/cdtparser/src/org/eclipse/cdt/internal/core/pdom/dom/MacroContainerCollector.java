@@ -18,7 +18,7 @@ import org.eclipse.cdt.core.parser.util.IContentAssistMatcher;
 import org.eclipse.cdt.internal.core.parser.util.ContentAssistMatcherFactory;
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeVisitor;
 import org.eclipse.cdt.internal.core.pdom.db.IString;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 

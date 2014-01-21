@@ -11,7 +11,7 @@
 
 package org.eclipse.cdt.core.model;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 /**

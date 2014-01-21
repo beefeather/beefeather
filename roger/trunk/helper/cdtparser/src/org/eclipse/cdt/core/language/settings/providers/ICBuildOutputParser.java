@@ -13,7 +13,7 @@ package org.eclipse.cdt.core.language.settings.providers;
 
 import org.eclipse.cdt.core.IConsoleParser;
 import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Console parser interface extended to support language settings providers.

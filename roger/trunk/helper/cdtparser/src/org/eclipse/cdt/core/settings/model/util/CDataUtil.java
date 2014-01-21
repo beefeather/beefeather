@@ -62,7 +62,7 @@ import org.eclipse.cdt.internal.core.WeakHashSetSynchronized;
 import org.eclipse.cdt.internal.core.settings.model.ExceptionFactory;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ProjectScope;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;

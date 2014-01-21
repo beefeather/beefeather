@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core.settings.model;
 import org.eclipse.cdt.core.model.CoreModel;
 import org.eclipse.cdt.core.model.ICProject;
 import org.eclipse.cdt.core.model.PathEntryContainerInitializer;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 public class ConfigBasedEntriesContainerInitializer extends

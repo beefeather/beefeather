@@ -64,8 +64,8 @@ import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousParameterDeclaratio
 import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousSimpleDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.IASTInternalScope;
 import org.eclipse.cdt.internal.core.parser.util.ContentAssistMatcherFactory;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.NullProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.CoreException;
+import ru.spb.rybin.eclipsereplacement.NullProgressMonitor;
 
 /**
  * Base implementation for c-scopes

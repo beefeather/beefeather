@@ -65,7 +65,7 @@ import org.eclipse.cdt.internal.core.parser.scanner.MacroDefinitionParser.Invali
 import org.eclipse.cdt.internal.core.parser.scanner.ScannerContext.BranchKind;
 import org.eclipse.cdt.internal.core.parser.scanner.ScannerContext.CodeState;
 import org.eclipse.cdt.internal.core.parser.scanner.ScannerContext.Conditional;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 
 /**

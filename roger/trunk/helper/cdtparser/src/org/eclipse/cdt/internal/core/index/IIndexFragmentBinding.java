@@ -14,7 +14,7 @@ package org.eclipse.cdt.internal.core.index;
 
 import org.eclipse.cdt.core.dom.ILinkage;
 import org.eclipse.cdt.core.index.IIndexBinding;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IIndexFragmentBinding extends IIndexBinding {
 	IIndexFragmentBinding[] EMPTY_INDEX_BINDING_ARRAY= new IIndexFragmentBinding[0];

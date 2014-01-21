@@ -11,7 +11,7 @@
 package org.eclipse.cdt.core.index.provider;
 
 import org.eclipse.cdt.core.model.ICProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * An IIndexProvider implementation provides additional indexing information for CDT projects

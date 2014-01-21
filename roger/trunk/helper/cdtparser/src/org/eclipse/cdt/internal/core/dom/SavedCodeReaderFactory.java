@@ -19,7 +19,7 @@ import org.eclipse.cdt.core.model.ITranslationUnit;
 import org.eclipse.cdt.core.parser.CodeReader;
 import org.eclipse.cdt.core.parser.CodeReaderCache;
 import org.eclipse.cdt.core.parser.ICodeReaderCache;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.Preferences;
 
 /**

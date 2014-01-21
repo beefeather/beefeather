@@ -15,7 +15,7 @@ import org.eclipse.cdt.internal.core.settings.model.CProjectDescriptionManager.C
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IWorkspaceRunnable;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 public final class SettingsContext implements IModificationContext{

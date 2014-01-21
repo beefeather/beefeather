@@ -14,7 +14,7 @@ package org.eclipse.cdt.internal.core.pdom.db;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * A container for storing a set of strings in the Database. The container allows only one instance of each

@@ -34,7 +34,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.CPPSemantics;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
 import org.eclipse.cdt.internal.core.parser.util.ContentAssistMatcherFactory;
 import org.eclipse.cdt.internal.core.pdom.PDOM;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Represents the enum scope for an enum stored in the index.

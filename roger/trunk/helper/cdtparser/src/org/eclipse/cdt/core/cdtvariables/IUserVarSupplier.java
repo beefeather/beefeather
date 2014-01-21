@@ -11,7 +11,7 @@
 package org.eclipse.cdt.core.cdtvariables;
 
 import org.eclipse.cdt.core.settings.model.ICConfigurationDescription;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Public interface to access to UserVarSupplier class methods

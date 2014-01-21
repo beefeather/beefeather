@@ -16,7 +16,7 @@ import org.eclipse.cdt.core.dom.ast.tag.IWritableTag;
 import org.eclipse.cdt.internal.core.pdom.db.Database;
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeComparator;
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeVisitor;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * A container for storing tags in the PDOM. The storage format is as follows:

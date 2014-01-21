@@ -31,7 +31,7 @@ import org.eclipse.cdt.internal.core.dom.Linkage;
 import org.eclipse.cdt.internal.core.dom.parser.ASTQueries;
 import org.eclipse.cdt.internal.core.dom.parser.IInternalVariable;
 import org.eclipse.cdt.internal.core.dom.parser.Value;
-import org.eclipse.core.runtime.PlatformObject;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 
 /**
  * Binding for a global or a local variable, serves as base class for fields.

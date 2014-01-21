@@ -14,7 +14,7 @@ import org.eclipse.cdt.core.AbstractCExtension;
 import org.eclipse.cdt.core.IBinaryParser;
 import org.eclipse.cdt.core.settings.model.ICConfigExtensionReference;
 import org.eclipse.cdt.core.settings.model.util.CExtensionUtil;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 
 /*

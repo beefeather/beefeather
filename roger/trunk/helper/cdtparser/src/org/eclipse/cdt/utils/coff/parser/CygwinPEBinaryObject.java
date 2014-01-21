@@ -325,7 +325,7 @@ public class CygwinPEBinaryObject extends PEBinaryObject {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see org.eclipse.core.runtime.PlatformObject#getAdapter(java.lang.Class)
+	 * @see ru.spb.rybin.eclipsereplacement.PlatformObject#getAdapter(java.lang.Class)
 	 */
 	@SuppressWarnings("rawtypes")
 	@Override

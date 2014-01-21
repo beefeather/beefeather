@@ -12,7 +12,7 @@ package org.eclipse.cdt.internal.core.dom;
 
 import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.cdt.core.dom.ILinkage;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class Linkage implements ILinkage {
 	public static final ILinkage NO_LINKAGE = new Linkage(NO_LINKAGE_ID, NO_LINKAGE_NAME);

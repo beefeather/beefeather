@@ -10,7 +10,7 @@
  *******************************************************************************/ 
 package org.eclipse.cdt.internal.core.index;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public interface IIndexFragmentFileSet {
 	/**

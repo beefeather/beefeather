@@ -13,7 +13,7 @@ package org.eclipse.cdt.core.parser;
 import java.io.IOException;
 
 import org.eclipse.cdt.core.index.IIndexFileLocation;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * This is the interface to a cache for CodeReaders.

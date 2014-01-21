@@ -47,7 +47,7 @@ import org.eclipse.cdt.internal.core.index.composite.CompositingNotImplementedEr
 import org.eclipse.cdt.internal.core.index.composite.ICompositesFactory;
 import org.eclipse.cdt.internal.core.index.composite.c.CCompositesFactory;
 import org.eclipse.cdt.internal.core.index.composite.cpp.CPPCompositesFactory;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;

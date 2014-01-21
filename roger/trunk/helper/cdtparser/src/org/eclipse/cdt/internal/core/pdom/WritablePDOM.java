@@ -44,7 +44,7 @@ import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMMacro;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMMacroReferenceName;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMName;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class WritablePDOM extends PDOM implements IWritableIndexFragment {
 	private boolean fClearedBecauseOfVersionMismatch= false;

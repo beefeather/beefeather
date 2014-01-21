@@ -12,7 +12,7 @@ package org.eclipse.cdt.internal.core;
 
 import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.cdt.core.resources.IPathEntryVariableManager;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;

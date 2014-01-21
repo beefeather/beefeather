@@ -11,7 +11,7 @@
 
 package org.eclipse.cdt.core.dom;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @author Doug Schaefer

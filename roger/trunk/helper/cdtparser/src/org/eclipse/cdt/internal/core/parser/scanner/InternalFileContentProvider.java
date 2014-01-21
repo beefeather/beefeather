@@ -31,7 +31,7 @@ import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent.Inclusio
 import org.eclipse.cdt.utils.UNCPathConverter;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Internal implementation of the file content providers

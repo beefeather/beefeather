@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * @noextend This interface is not intended to be extended by clients.

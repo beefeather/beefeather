@@ -18,7 +18,7 @@ import org.eclipse.cdt.core.index.IIndexFile;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPUnknownField;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentBinding;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CompositeCPPUnknownField extends CPPUnknownField implements IIndexBinding {
 	public CompositeCPPUnknownField(IType owner, char[] name) {

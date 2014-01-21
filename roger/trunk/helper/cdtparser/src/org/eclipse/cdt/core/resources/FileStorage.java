@@ -17,10 +17,10 @@ import java.io.InputStream;
 
 import org.eclipse.cdt.core.CCorePlugin;
 import org.eclipse.core.resources.IStorage;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.PlatformObject;
+import ru.spb.rybin.eclipsereplacement.PlatformObject;
 import org.eclipse.core.runtime.Status;
 
 /**

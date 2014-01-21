@@ -12,7 +12,7 @@ package org.eclipse.cdt.internal.core.pdom.dom;
 
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeVisitor;
 import org.eclipse.cdt.internal.core.pdom.db.IString;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Visitor to find a macro container in a BTree.

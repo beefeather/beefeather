@@ -14,7 +14,7 @@ import org.eclipse.cdt.core.ICDescriptor;
 import org.eclipse.cdt.core.ICOwner;
 import org.eclipse.cdt.core.ICOwnerInfo;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class COwner implements ICOwnerInfo {
 

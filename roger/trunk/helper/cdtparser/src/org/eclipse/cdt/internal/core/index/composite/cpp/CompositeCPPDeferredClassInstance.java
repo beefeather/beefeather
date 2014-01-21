@@ -20,7 +20,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPDeferredClassInstance;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPUnknownTypeScope;
 import org.eclipse.cdt.internal.core.index.IIndexScope;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CompositeCPPDeferredClassInstance extends CPPDeferredClassInstance implements IIndexBinding {
 	public CompositeCPPDeferredClassInstance(ICPPClassTemplate template, ICPPTemplateArgument[] args) {

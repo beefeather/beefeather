@@ -15,7 +15,7 @@ package org.eclipse.cdt.core.index;
 import org.eclipse.cdt.core.dom.ILinkage;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.internal.core.index.DeclaredBindingsFilter;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Can be subclassed and used for queries in the index.

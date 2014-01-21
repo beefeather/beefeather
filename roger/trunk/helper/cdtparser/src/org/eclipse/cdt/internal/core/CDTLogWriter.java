@@ -24,7 +24,7 @@ import com.ibm.icu.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.eclipse.cdt.core.CCorePlugin;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IStatus;
 
 

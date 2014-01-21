@@ -37,7 +37,7 @@ import org.eclipse.cdt.core.settings.model.ICTargetPlatformSetting;
 import org.eclipse.cdt.core.settings.model.MultiItemsHolder;
 import org.eclipse.cdt.core.settings.model.WriteAccessException;
 import org.eclipse.cdt.core.settings.model.extension.CConfigurationData;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.QualifiedName;
 

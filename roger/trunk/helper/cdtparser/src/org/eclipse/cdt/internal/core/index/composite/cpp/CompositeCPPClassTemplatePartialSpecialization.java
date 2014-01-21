@@ -18,7 +18,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateArgument;
 import org.eclipse.cdt.internal.core.index.IIndexFragmentBinding;
 import org.eclipse.cdt.internal.core.index.composite.ICompositesFactory;
 import org.eclipse.cdt.internal.core.pdom.dom.IPDOMOverloader;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 public class CompositeCPPClassTemplatePartialSpecialization extends CompositeCPPClassTemplate implements ICPPClassTemplatePartialSpecialization, IPDOMOverloader {
 	public CompositeCPPClassTemplatePartialSpecialization(ICompositesFactory cf, ICPPClassTemplatePartialSpecialization delegate) {

@@ -30,7 +30,7 @@ import org.eclipse.cdt.core.settings.model.ICProjectDescriptionListener;
 import org.eclipse.cdt.internal.core.settings.model.CExternalSettingsManager.CContainerRef;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * A class responsible for persisting CDT Projects and Configuration IDs as referenced

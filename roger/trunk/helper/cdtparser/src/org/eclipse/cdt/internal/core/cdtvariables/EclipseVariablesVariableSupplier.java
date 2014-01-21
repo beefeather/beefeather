@@ -22,7 +22,7 @@ import org.eclipse.cdt.core.cdtvariables.ICdtVariable;
 import org.eclipse.cdt.core.cdtvariables.ICdtVariableStatus;
 import org.eclipse.cdt.utils.cdtvariables.ICdtVariableSupplier;
 import org.eclipse.cdt.utils.cdtvariables.IVariableContextInfo;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.variables.IDynamicVariable;
 import org.eclipse.core.variables.IStringVariable;
 import org.eclipse.core.variables.IStringVariableManager;

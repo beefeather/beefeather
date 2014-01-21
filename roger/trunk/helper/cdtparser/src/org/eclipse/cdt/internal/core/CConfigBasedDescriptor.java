@@ -44,7 +44,7 @@ import org.eclipse.cdt.internal.core.settings.model.xml.XmlStorage;
 import org.eclipse.cdt.internal.core.settings.model.xml.XmlStorageElement;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;

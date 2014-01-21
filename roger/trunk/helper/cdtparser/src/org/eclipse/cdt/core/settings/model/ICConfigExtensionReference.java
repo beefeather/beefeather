@@ -11,7 +11,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core.settings.model;
 
-import org.eclipse.core.runtime.CoreException;
+import ru.spb.rybin.eclipsereplacement.CoreException;
 
 /**
  * Holds executable extension information in the 
