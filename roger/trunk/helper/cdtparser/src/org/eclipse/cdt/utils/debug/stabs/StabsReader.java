@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.cdt.core.ISymbolReader;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 public class StabsReader implements ISymbolReader {
 

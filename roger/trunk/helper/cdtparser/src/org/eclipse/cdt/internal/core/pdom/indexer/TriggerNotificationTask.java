@@ -16,7 +16,7 @@ import org.eclipse.cdt.internal.core.pdom.IndexerProgress;
 import org.eclipse.cdt.internal.core.pdom.PDOMManager;
 import org.eclipse.cdt.internal.core.pdom.WritablePDOM;
 import org.eclipse.cdt.internal.core.pdom.PDOM.ChangeEvent;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * Used to trigger a change notification when a pdom is loaded.

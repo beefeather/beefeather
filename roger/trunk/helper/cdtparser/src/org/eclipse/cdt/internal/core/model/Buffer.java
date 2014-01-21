@@ -25,7 +25,7 @@ import org.eclipse.cdt.core.model.IOpenable;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.SafeRunner;
 
@@ -308,7 +308,7 @@ public class Buffer implements IBuffer {
 	}
 
 	/**
-	 * @see org.eclipse.cdt.core.model.IBuffer#save(org.eclipse.core.runtime.IProgressMonitor, boolean)
+	 * @see org.eclipse.cdt.core.model.IBuffer#save(ru.spb.rybin.eclipsereplacement.IProgressMonitor, boolean)
 	 */
 	@Override
 	public void save(IProgressMonitor progress, boolean force)

@@ -42,7 +42,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.osgi.util.NLS;
 
 /**

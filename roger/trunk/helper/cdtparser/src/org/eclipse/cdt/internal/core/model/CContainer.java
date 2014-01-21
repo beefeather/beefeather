@@ -34,7 +34,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 
 public class CContainer extends Openable implements ICContainer {

@@ -28,7 +28,7 @@ import org.eclipse.cdt.internal.core.pdom.IndexerProgress;
 import org.eclipse.cdt.internal.core.pdom.PDOMWriter;
 import org.eclipse.cdt.internal.core.pdom.WritablePDOM;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * The base class for stand-alone index population tools.

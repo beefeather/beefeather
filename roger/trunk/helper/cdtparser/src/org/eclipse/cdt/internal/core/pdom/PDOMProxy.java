@@ -36,7 +36,7 @@ import org.eclipse.cdt.internal.core.pdom.PDOM.DebugLockInfo;
 import org.eclipse.cdt.internal.core.pdom.PDOM.IListener;
 import org.eclipse.cdt.internal.core.pdom.dom.PDOMLinkage;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * The PDOMProxy is returned by the PDOMManager before the indexer kicks in. Also and more

@@ -16,7 +16,7 @@ import org.eclipse.cdt.core.model.ICElement;
 import org.eclipse.cdt.core.model.ICElementVisitor;
 import org.eclipse.cdt.core.model.ITranslationUnit;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 final public class TranslationUnitCollector implements ICElementVisitor {
 	private final Collection<ITranslationUnit> fSources;

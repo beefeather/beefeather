@@ -24,7 +24,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourceAttributes;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 public abstract class Openable extends Parent implements IOpenable {
 	protected IResource resource;
@@ -249,7 +249,7 @@ public abstract class Openable extends Parent implements IOpenable {
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.internal.core.model.CElement#generateInfos(java.lang.Object, java.util.Map, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.internal.core.model.CElement#generateInfos(java.lang.Object, java.util.Map, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	protected void generateInfos(CElementInfo info, Map<ICElement, CElementInfo> newElements,

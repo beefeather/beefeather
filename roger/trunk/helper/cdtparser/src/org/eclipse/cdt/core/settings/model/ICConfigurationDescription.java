@@ -403,7 +403,7 @@ public interface ICConfigurationDescription extends ICSettingContainer, ICSettin
 	 *
 	 * @param ids the ids of externalSettinsProvider extensions
 	 *
-	 * @see ICProjectDescriptionManager#updateExternalSettingsProviders(String[], org.eclipse.core.runtime.IProgressMonitor)
+	 * @see ICProjectDescriptionManager#updateExternalSettingsProviders(String[], ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	void updateExternalSettingsProviders(String[] ids) throws WriteAccessException;
 

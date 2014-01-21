@@ -298,11 +298,11 @@ public abstract class ASTTranslationUnit extends ASTNode implements IASTTranslat
     
     @Override
 	public final void setIndex(IIndex index) {
-    	this.fIndex = index;
-    	if (index != null) {
-    		fIndexFileSet= index.createFileSet();
-    		fASTFileSet= index.createFileSet();
-    	}
+//    	this.fIndex = index;
+//    	if (index != null) {
+//    		fIndexFileSet= index.createFileSet();
+//    		fASTFileSet= index.createFileSet();
+//    	}
     }
 
     @Override

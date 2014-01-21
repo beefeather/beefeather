@@ -35,7 +35,7 @@ import org.eclipse.cdt.internal.core.model.CElement;
 import org.eclipse.core.resources.IResource;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
 

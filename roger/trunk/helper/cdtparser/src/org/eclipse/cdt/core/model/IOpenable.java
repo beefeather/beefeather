@@ -11,7 +11,7 @@
 package org.eclipse.cdt.core.model;
 
 
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * An openable is an element that can be opened, saved, and closed.

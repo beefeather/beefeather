@@ -11,7 +11,7 @@
 package org.eclipse.cdt.core.model;
 
 import org.eclipse.core.resources.IWorkspace;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * Represent the root C element corresponding to the workspace. 

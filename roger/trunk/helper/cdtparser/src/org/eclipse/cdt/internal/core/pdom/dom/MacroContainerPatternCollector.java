@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 
 import org.eclipse.cdt.internal.core.pdom.db.IBTreeVisitor;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 
 /**

@@ -13,7 +13,7 @@ package org.eclipse.cdt.internal.core;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * Helper class to report progress of the build via {@link IProgressMonitor}

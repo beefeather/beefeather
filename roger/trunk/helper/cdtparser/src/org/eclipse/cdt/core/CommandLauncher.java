@@ -24,7 +24,7 @@ import org.eclipse.cdt.utils.spawner.ProcessFactory;
 import org.eclipse.core.resources.IProject;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.osgi.util.NLS;
@@ -242,7 +242,7 @@ public class CommandLauncher implements ICommandLauncher {
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.core.ICommandLauncher#waitAndRead(java.io.OutputStream, java.io.OutputStream, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.ICommandLauncher#waitAndRead(java.io.OutputStream, java.io.OutputStream, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public int waitAndRead(OutputStream output, OutputStream err, IProgressMonitor monitor) {

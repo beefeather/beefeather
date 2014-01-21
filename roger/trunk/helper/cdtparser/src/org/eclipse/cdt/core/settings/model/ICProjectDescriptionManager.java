@@ -13,7 +13,7 @@ package org.eclipse.cdt.core.settings.model;
 
 import org.eclipse.core.resources.IProject;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * This interface represents the manager of CDT Project descriptions.

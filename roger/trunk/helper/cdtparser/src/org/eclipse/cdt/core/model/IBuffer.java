@@ -12,7 +12,7 @@ package org.eclipse.cdt.core.model;
 
 
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * A buffer contains the text contents of a resource. It is not language-specific.
@@ -219,7 +219,7 @@ public interface IBuffer {
 	 * @exception CModelException if an error occurs writing the buffer 	to
 	 * the underlying resource
 	 *
-	 * @see org.eclipse.core.resources.IFile#setContents(java.io.InputStream, boolean, boolean, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.core.resources.IFile#setContents(java.io.InputStream, boolean, boolean, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	public void save(IProgressMonitor progress, boolean force) throws CModelException;
 	/**

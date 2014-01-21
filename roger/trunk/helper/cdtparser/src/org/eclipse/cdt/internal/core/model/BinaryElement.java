@@ -45,7 +45,7 @@ public class BinaryElement extends CElement implements IBinaryElement, ISourceMa
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.core.model.ISourceManipulation#copy(org.eclipse.cdt.core.model.ICElement, org.eclipse.cdt.core.model.ICElement, java.lang.String, boolean, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.model.ISourceManipulation#copy(org.eclipse.cdt.core.model.ICElement, org.eclipse.cdt.core.model.ICElement, java.lang.String, boolean, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void copy(ICElement container, ICElement sibling, String rename, boolean replace, IProgressMonitor monitor)
@@ -54,7 +54,7 @@ public class BinaryElement extends CElement implements IBinaryElement, ISourceMa
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.core.model.ISourceManipulation#delete(boolean, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.model.ISourceManipulation#delete(boolean, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void delete(boolean force, IProgressMonitor monitor) throws CModelException {
@@ -62,7 +62,7 @@ public class BinaryElement extends CElement implements IBinaryElement, ISourceMa
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.core.model.ISourceManipulation#move(org.eclipse.cdt.core.model.ICElement, org.eclipse.cdt.core.model.ICElement, java.lang.String, boolean, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.model.ISourceManipulation#move(org.eclipse.cdt.core.model.ICElement, org.eclipse.cdt.core.model.ICElement, java.lang.String, boolean, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void move(ICElement container, ICElement sibling, String rename, boolean replace, IProgressMonitor monitor)
@@ -71,7 +71,7 @@ public class BinaryElement extends CElement implements IBinaryElement, ISourceMa
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.core.model.ISourceManipulation#rename(java.lang.String, boolean, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.model.ISourceManipulation#rename(java.lang.String, boolean, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void rename(String name, boolean replace, IProgressMonitor monitor) throws CModelException {
@@ -229,7 +229,7 @@ public class BinaryElement extends CElement implements IBinaryElement, ISourceMa
 	}
 
 	/* (non-Javadoc)
-	 * @see org.eclipse.cdt.internal.core.model.CElement#generateInfos(java.lang.Object, java.util.Map, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.internal.core.model.CElement#generateInfos(java.lang.Object, java.util.Map, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	protected void generateInfos(CElementInfo info, Map<ICElement, CElementInfo> newElements, IProgressMonitor monitor) throws CModelException {

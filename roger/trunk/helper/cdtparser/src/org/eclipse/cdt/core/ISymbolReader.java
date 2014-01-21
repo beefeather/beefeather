@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.cdt.core;
 
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * A reader that's able to decipher debug symbol formats.

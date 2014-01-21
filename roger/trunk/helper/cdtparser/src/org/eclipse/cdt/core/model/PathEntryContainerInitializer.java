@@ -59,7 +59,7 @@ public abstract class PathEntryContainerInitializer {
      * @param project the project for which the container is to be updated
 	 * @param containerSuggestion a suggestion to update the corresponding container definition
 	 * @throws CoreException when <code>CoreModel#setPathEntryContainer</code> would throw any.
-	 * @see CoreModel#setPathEntryContainer(ICProject[], IPathEntryContainer, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see CoreModel#setPathEntryContainer(ICProject[], IPathEntryContainer, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 * @see #canUpdatePathEntryContainer(IPath, ICProject)
 	 */
     public void requestPathEntryContainerUpdate(IPath containerPath, ICProject project, IPathEntryContainer containerSuggestion) throws CoreException {

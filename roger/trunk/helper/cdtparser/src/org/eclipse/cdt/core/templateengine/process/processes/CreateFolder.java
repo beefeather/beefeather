@@ -19,7 +19,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 
 
@@ -30,7 +30,7 @@ import org.eclipse.core.runtime.Path;
 public class CreateFolder extends ProcessRunner {
 
 	/**
-	 * @see org.eclipse.cdt.core.templateengine.process.ProcessRunner#process(org.eclipse.cdt.core.templateengine.TemplateCore, org.eclipse.cdt.core.templateengine.process.ProcessArgument[], java.lang.String, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.templateengine.process.ProcessRunner#process(org.eclipse.cdt.core.templateengine.TemplateCore, org.eclipse.cdt.core.templateengine.process.ProcessArgument[], java.lang.String, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void process(TemplateCore template, ProcessArgument[] args, String processId, IProgressMonitor monitor) throws ProcessFailureException {

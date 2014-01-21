@@ -17,7 +17,7 @@ import org.eclipse.cdt.core.settings.model.extension.CConfigurationDataProvider;
 import org.eclipse.cdt.core.settings.model.util.CDataSerializer;
 import org.eclipse.cdt.core.settings.model.util.CDataUtil;
 import ru.spb.rybin.eclipsereplacement.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 public class CDefaultConfigurationDataProvider extends CConfigurationDataProvider {
 	private static final String DEFAULT_STORAGE_ID = "defaultConfigurationDataProvider";  //$NON-NLS-1$

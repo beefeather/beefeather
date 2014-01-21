@@ -46,7 +46,7 @@ import ru.spb.rybin.eclipsereplacement.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IExtensionPoint;
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 import org.eclipse.core.runtime.ISafeRunnable;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
@@ -262,7 +262,7 @@ final public class CConfigBasedDescriptorManager implements ICDescriptorManager 
 	/*
 	 * Run the descriptor operation. Lock the descriptor while this takes place...
 	 * (non-Javadoc)
-	 * @see org.eclipse.cdt.core.ICDescriptorManager#runDescriptorOperation(org.eclipse.core.resources.IProject, org.eclipse.cdt.core.ICDescriptorOperation, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.ICDescriptorManager#runDescriptorOperation(org.eclipse.core.resources.IProject, org.eclipse.cdt.core.ICDescriptorOperation, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void runDescriptorOperation(IProject project, ICDescriptorOperation op, IProgressMonitor monitor)
@@ -292,7 +292,7 @@ final public class CConfigBasedDescriptorManager implements ICDescriptorManager 
 	 * Runs a descriptor operation directly on an ICProjectDescription.
 	 *
 	 * (non-Javadoc)
-	 * @see org.eclipse.cdt.core.ICDescriptorManager#runDescriptorOperation(org.eclipse.core.resources.IProject, org.eclipse.cdt.core.settings.model.ICProjectDescription, org.eclipse.cdt.core.ICDescriptorOperation, org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.cdt.core.ICDescriptorManager#runDescriptorOperation(org.eclipse.core.resources.IProject, org.eclipse.cdt.core.settings.model.ICProjectDescription, org.eclipse.cdt.core.ICDescriptorOperation, ru.spb.rybin.eclipsereplacement.IProgressMonitor)
 	 */
 	@Override
 	public void runDescriptorOperation(IProject project, ICProjectDescription des, ICDescriptorOperation op, IProgressMonitor monitor)

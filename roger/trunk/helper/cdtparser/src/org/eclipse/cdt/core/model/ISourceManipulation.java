@@ -11,7 +11,7 @@
 package org.eclipse.cdt.core.model;
 
  
-import org.eclipse.core.runtime.IProgressMonitor;
+import ru.spb.rybin.eclipsereplacement.IProgressMonitor;
 
 /**
  * Common protocol for C elements that support source code manipulations such
