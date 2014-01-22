@@ -369,24 +369,45 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
   const char* tokensFileName = "tokens";
   const char* overviewFileName = "overview";
 
-  std::string Error;
+  {
+    OwningPtr<llvm::raw_fd_ostream> OsDebug;
+    std::string Error;
+    OsDebug.reset(new llvm::raw_fd_ostream(tokensFileName, Error, llvm::sys::fs::F_Binary));
+    assert(Error.empty());
+  }
+
+
   OwningPtr<llvm::raw_fd_ostream> OS;
-  OS.reset(new llvm::raw_fd_ostream(
-      tokensFileName, Error,
-      llvm::sys::fs::F_Binary));
-  assert(Error.empty());
+  SmallString<128> TokensTempPath;
+  {
+    TokensTempPath += "tokens-%%%%%%%%";
+    bool problem = llvm::sys::fs::createUniqueFile(TokensTempPath.str(), TokensTempPath);
+    assert(!problem);
+
+    std::string Error;
+    OS.reset(new llvm::raw_fd_ostream(TokensTempPath.c_str(), Error, llvm::sys::fs::F_Binary));
+    assert(Error.empty());
+  }
 
   CacheTokensRoger(Toks, OS.get());
   OS->close();
 
+  SmallString<128> OverviewTempPath;
+  {
+    OverviewTempPath += "overview-%%%%%%%%";
+    bool problem = llvm::sys::fs::createUniqueFile(OverviewTempPath.str(), OverviewTempPath);
+    assert(!problem);
+  }
+
   // Call overview parser.
   {
-    const char* executableName = "/home/peter/clang-roger/cdt-hack/parse_overview";
+    //const char* executableName = "/home/peter/clang-roger/cdt-hack/parse_overview";
+    const char* executableName = "./parse_overview";
     StringRef Executable(executableName);
     SmallVector<const char*, 5> Argv;
     Argv.push_back(executableName);
-    Argv.push_back(tokensFileName);
-    Argv.push_back(overviewFileName);
+    Argv.push_back(TokensTempPath.c_str());
+    Argv.push_back(OverviewTempPath.c_str());
     Argv.push_back(0);
 
     int res = llvm::sys::ExecuteAndWait(Executable, Argv.data());
@@ -394,16 +415,15 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
   }
 
   // Parse overview.
-  {
-    OwningPtr<llvm::MemoryBuffer> File;
+  OwningPtr<llvm::MemoryBuffer> FileBytes;
+  bool res = llvm::MemoryBuffer::getFile(overviewFileName, FileBytes);
+  assert(!res && "Cannot read file");
 
-    bool res = llvm::MemoryBuffer::getFile(overviewFileName, File);
-    assert(!res && "Cannot read file");
+  llvm::sys::fs::remove(OverviewTempPath.str());
+  llvm::sys::fs::remove(TokensTempPath.str());
 
-    RogerOverviewFileParser parser(*File.get(), Toks, this);
-
-    return parser.parse();
-  }
+  RogerOverviewFileParser parser(*FileBytes.get(), Toks, this);
+  return parser.parse();
 }
 
 struct Parser::RogerParsingQueue::Item {
