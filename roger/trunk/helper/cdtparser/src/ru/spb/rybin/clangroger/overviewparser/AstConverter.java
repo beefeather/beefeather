@@ -532,14 +532,22 @@ class AstConverter {
 	
 	static class Printer {
 		private final String offset;
-		Printer(String offset) {
+		private final boolean isMute;
+		Printer(String offset, boolean isMute) {
 			this.offset = offset;
+			this.isMute = isMute;
 		}
 		void println(String text) {
-			System.out.println(offset + text);
+			if (!isMute) {
+				System.out.println(offset + text);
+			}
 		}
 		Printer getInner() {
-			return new Printer(offset + "  ");
+			if (isMute) {
+				return this;
+			} else {
+				return new Printer(offset + "  ", false);
+			}
 		}
 	}
 }
