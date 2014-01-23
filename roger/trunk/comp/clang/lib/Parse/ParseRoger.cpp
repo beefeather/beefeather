@@ -139,7 +139,7 @@ public:
       parseError();
       return NULL;
     } else {
-      assert(false && "Unknown code");
+      assert(false && "Unknown file content code");
       return NULL;
     }
   }
@@ -168,7 +168,7 @@ private:
       parseFunction(list);
       break;
     case 5:
-      assert(nslist);
+      assert(nslist && "Parse region must be invoked within namespace context");
       parseNamespace(nslist);
       break;
     case 6:
@@ -181,7 +181,7 @@ private:
       parseEnumRegion(list);
       break;
     default:
-      assert(false && "Unknown code");
+      assert(false && "Unknown region code");
     }
   }
   void parseNonType(RogerDeclList* list) {
@@ -211,7 +211,7 @@ private:
     parseRange(classDecl->classTokens);
     classDecl->isTemplateSecondary = takeByte();
     while (true) {
-      assert(m_current < m_end);
+      assert(m_current < m_end && "Unexpected end of file while reading list of regions in class");
       if (*m_current == 0) {
         ++m_current;
         break;
@@ -232,7 +232,7 @@ private:
     RogerNamespace* ns = new RogerNamespace(Toks);
     ns->nameToken = takeInt16();
     while (true) {
-      assert(m_current < m_end);
+      assert(m_current < m_end && "Unexpected end of file while reading list of regions in namespace");
       if (*m_current == 0) {
         ++m_current;
         break;
@@ -262,10 +262,7 @@ private:
   void parseErrorRegion() {
     RogerRange range;
     parseRange(range);
-    int len = takeInt16();
-    assert(m_current + len <= m_end);
-    StringRef message(reinterpret_cast<const char *>(m_current), len);
-    m_current += len;
+    StringRef message = takeString();
     P->Diag(Toks[range.begin], diag::err_roger_invalid_region) << message;
   }
 
@@ -312,7 +309,7 @@ private:
       nameToken = 0;
       break;
     default:
-      assert(false && "Unknown name code");
+      assert(false && "Unknown declaration name code");
     }
   }
 
@@ -323,20 +320,25 @@ private:
 
   void parseError() {
     std::cout << "Error";
-    int len = takeInt16();
-    assert(m_current + len == m_end);
-    StringRef message(reinterpret_cast<const char *>(m_current), len);
+    StringRef message = takeString();
     std::cout << message.str() << '\n';
   }
 
   char takeByte() {
-    assert(m_current < m_end);
+    assert(m_current < m_end && "End of file");
     return *(m_current++);
   }
   int takeInt16() {
-    assert(m_current + 1 < m_end);
+    assert(m_current + 1 < m_end && "End of file");
     int result = m_current[0] + m_current[1] * 256;
     m_current += 2;
+    return result;
+  }
+  StringRef takeString() {
+    int len = takeInt16();
+    assert(m_current + len <= m_end && "End of file while reading a string");
+    StringRef result(reinterpret_cast<const char *>(m_current), len);
+    m_current += len;
     return result;
   }
 };
@@ -349,7 +351,7 @@ class RogerCallbackGuard {
 public:
   RogerCallbackGuard() : first(true) {}
   void check() {
-    assert(first);
+    assert(first && "Callback guard violation");
     first = false;
   }
 };
@@ -366,37 +368,42 @@ public:
 };
 
 RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
-  const char* tokensFileName = "tokens";
-  const char* overviewFileName = "overview";
 
   {
+    const char* tokensFileName = "tokens";
+
     OwningPtr<llvm::raw_fd_ostream> OsDebug;
     std::string Error;
     OsDebug.reset(new llvm::raw_fd_ostream(tokensFileName, Error, llvm::sys::fs::F_Binary));
-    assert(Error.empty());
+    assert(Error.empty() && "Failed to create debug tokens file");
+
+    CacheTokensRoger(Toks, OsDebug.get());
+    OsDebug->close();
   }
 
 
-  OwningPtr<llvm::raw_fd_ostream> OS;
   SmallString<128> TokensTempPath;
   {
+    OwningPtr<llvm::raw_fd_ostream> OS;
+
     TokensTempPath += "tokens-%%%%%%%%";
     bool problem = llvm::sys::fs::createUniqueFile(TokensTempPath.str(), TokensTempPath);
-    assert(!problem);
+    assert(!problem && "Failed to create tokens unique file");
 
     std::string Error;
     OS.reset(new llvm::raw_fd_ostream(TokensTempPath.c_str(), Error, llvm::sys::fs::F_Binary));
-    assert(Error.empty());
+    assert(Error.empty() && "Failed to create main tokens file");
+
+    CacheTokensRoger(Toks, OS.get());
+    OS->close();
   }
 
-  CacheTokensRoger(Toks, OS.get());
-  OS->close();
 
   SmallString<128> OverviewTempPath;
   {
     OverviewTempPath += "overview-%%%%%%%%";
     bool problem = llvm::sys::fs::createUniqueFile(OverviewTempPath.str(), OverviewTempPath);
-    assert(!problem);
+    assert(!problem  && "Failed to create overview unique file");
   }
 
   // Call overview parser.
@@ -411,13 +418,13 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
     Argv.push_back(0);
 
     int res = llvm::sys::ExecuteAndWait(Executable, Argv.data());
-    assert(res == 0 && "Result code is not null");
+    assert(res == 0 && "Failed to execute overview parser, result code is not null");
   }
 
   // Parse overview.
   OwningPtr<llvm::MemoryBuffer> FileBytes;
-  bool res = llvm::MemoryBuffer::getFile(overviewFileName, FileBytes);
-  assert(!res && "Cannot read file");
+  bool res = llvm::MemoryBuffer::getFile(OverviewTempPath.c_str(), FileBytes);
+  assert(!res && "Cannot read overview file");
 
   llvm::sys::fs::remove(OverviewTempPath.str());
   llvm::sys::fs::remove(TokensTempPath.str());
@@ -690,13 +697,18 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
       ConsumeToken();
 
       const char *filePathPos = relativePath.data();
+      SourceLocation FileStartLocation = Tok.getLocation();
       DeclContext *nsContext = ParseRogerNamespaceHeader(filePathPos);
 
-      assert(llvm::sys::path::is_separator(*filePathPos) && "Incorrect namespace");
-      ++filePathPos;
-
-      file->FileName = std::string(filePathPos);
-      assert(file->FileName == llvm::sys::path::filename(relativePath));
+      if (filePathPos == 0 || !llvm::sys::path::is_separator(*filePathPos)) {
+        Diag(FileStartLocation, diag::err_roger_namespace_doesnt_match_path);
+      } else {
+        ++filePathPos;
+        file->FileName = std::string(filePathPos);
+        if (file->FileName != llvm::sys::path::filename(relativePath)) {
+          Diag(FileStartLocation, diag::err_roger_namespace_doesnt_match_path);
+        }
+      }
 
       file->nsContext = nsContext;
       file->range.begin = Toks.size();
@@ -1247,10 +1259,18 @@ DeclContext *Parser::ParseRogerNamespaceHeader(const char * &filePathPos) {
     }
     IdentifierInfo *II = Tok.getIdentifierInfo();
 
-    assert(llvm::sys::path::is_separator(*filePathPos) && "Incorrect namespace");
-    ++filePathPos;
-    assert(strncmp(II->getNameStart(), filePathPos, II->getLength()) == 0 && "Incorrect namespace");
-    filePathPos += II->getLength();
+    if (filePathPos) {
+      if (!llvm::sys::path::is_separator(*filePathPos)) {
+        filePathPos = 0;
+      } else {
+        ++filePathPos;
+        if (strncmp(II->getNameStart(), filePathPos, II->getLength()) != 0) {
+          filePathPos = 0;
+        } else {
+          filePathPos += II->getLength();
+        }
+      }
+    }
     DeclContext *parent = result;
     result = Actions.ActOnRogerNamespaceHeaderPart(parent, Tok.getIdentifierInfo(), Tok.getLocation(), attrs.getList());
     ConsumeAnyToken();

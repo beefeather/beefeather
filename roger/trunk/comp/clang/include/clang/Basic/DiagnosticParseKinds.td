@@ -863,6 +863,8 @@ def err_roger_invalid_region : Error<
   "unrecognized part <%0> (Roger overview parser)">;
 def err_roger_unexpected_in_class_file : Error<
   "only a class name <%0> is expected at roger class source file">;
+def err_roger_namespace_doesnt_match_path : Error<
+  "roger namespace declaration doesn't match file path">;
 
 
 } // end of Parser diagnostics
