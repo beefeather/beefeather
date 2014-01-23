@@ -1439,6 +1439,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       break;
     }
   }
+
+  Opts.RogerVerbose = Args.hasArg(OPT_roger_verbose);
+  if (Arg *A = Args.getLastArg(OPT_roger_overview_parser)) {
+    Opts.RogerPathToOverviewParser = A->getValue();
+  }
 }
 
 static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,

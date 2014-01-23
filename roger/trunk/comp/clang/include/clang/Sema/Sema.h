@@ -415,8 +415,8 @@ public:
   };
 
   class RogerLogScope {
-    const static bool mute;
     const char *myText;
+    const bool mute;
     static int indent;
     void printIndent() {
       for (int i = 0; i < indent; i++) {
@@ -425,7 +425,7 @@ public:
     }
 
   public:
-    RogerLogScope(const char *text) : myText(text) {
+    RogerLogScope(const char *text, bool mute) : myText(text), mute(mute) {
       if (mute) {
         return;
       }

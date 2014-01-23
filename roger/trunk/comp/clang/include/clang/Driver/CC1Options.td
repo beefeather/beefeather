@@ -556,5 +556,12 @@ def cl_std_EQ : Joined<["-"], "cl-std=">,
 
 def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">;
+  
+// Roger options
+def roger_verbose : Flag<["-"], "roger-verbose">,
+  HelpText<"Make Roger code verbose">;
+  
+def roger_overview_parser : Joined<["-"], "roger-overview-parser">,
+  HelpText<"Path to Roger overview parser">;
 
 } // let Flags = [CC1Option]

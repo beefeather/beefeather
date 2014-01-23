@@ -408,13 +408,20 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
 
   // Call overview parser.
   {
-    //const char* executableName = "/home/peter/clang-roger/cdt-hack/parse_overview";
-    const char* executableName = "./parse_overview";
-    StringRef Executable(executableName);
+    StringRef Executable;
+    if (getLangOpts().RogerPathToOverviewParser.empty()) {
+      Executable = "./roger_parse_overview";
+    } else {
+      assert(getLangOpts().RogerPathToOverviewParser[0] == '=' && "Path to overview parser must be specified with '='");
+      Executable = getLangOpts().RogerPathToOverviewParser.substr(1);
+    }
     SmallVector<const char*, 5> Argv;
-    Argv.push_back(executableName);
+    Argv.push_back(Executable.data());
     Argv.push_back(TokensTempPath.c_str());
     Argv.push_back(OverviewTempPath.c_str());
+    if (getLangOpts().RogerVerbose) {
+      Argv.push_back("-v");
+    }
     Argv.push_back(0);
 
     int res = llvm::sys::ExecuteAndWait(Executable, Argv.data());
@@ -930,7 +937,7 @@ void Parser::FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclLis
     }
   }
 
-  Sema::RogerLogScope logScope("FillRogerSourceFileWithNames");
+  Sema::RogerLogScope logScope("FillRogerSourceFileWithNames", !getLangOpts().RogerVerbose);
   if (NamedDecl *nd = dyn_cast<NamedDecl>(DC)) {
     nd->printName(logScope.outs_nl());
     logScope.outs() << '\n';
@@ -973,7 +980,7 @@ void Parser::FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclLis
 }
 
 void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *RD, RogerFile *file, ParsingClass *parsingClass) {
-  Sema::RogerLogScope logScope("FillRogerRecordWithNames");
+  Sema::RogerLogScope logScope("FillRogerRecordWithNames", !getLangOpts().RogerVerbose);
   RD->printName(logScope.outs_nl());
   logScope.outs() << '\n';
 

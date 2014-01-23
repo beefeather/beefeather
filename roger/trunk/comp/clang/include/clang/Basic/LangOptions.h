@@ -84,6 +84,11 @@ public:
 
   /// \brief Options for parsing comments.
   CommentOptions CommentOpts;
+
+
+  // Roger
+  std::string RogerPathToOverviewParser;
+  bool RogerVerbose;
   
   LangOptions();
 

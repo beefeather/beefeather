@@ -92,7 +92,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     CurrentInstantiationScope(0), DisableTypoCorrection(false),
     TyposCorrected(0), AnalysisWarnings(*this),
     VarDataSharingAttributesStack(0), CurScope(0),
-    Ident_super(0), CurRogerImportNamespace(0), Ident___float128(0)
+    Ident_super(0), Ident___float128(0), CurRogerImportNamespace(0)
 {
   TUScope = 0;
 

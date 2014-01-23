@@ -209,7 +209,7 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
   }
 
   if (dc->RogerNameFillCallback) {
-    RogerLogScope logScope("MaterializeRogerNames 1: fill names");
+    RogerLogScope logScope("MaterializeRogerNames 1: fill names", !getLangOpts().RogerVerbose);
     logScope.outs_nl() << Name;
     if (NamedDecl *nd = dyn_cast<NamedDecl>(dc)) {
       logScope.outs() << " in ";
@@ -262,7 +262,7 @@ void Sema::MaterializeRogerNames(DeclarationName Name, DeclContext* dc, bool Red
     return;
   }
   {
-    RogerLogScope logScope("MaterializeRogerNames 2: go over items");
+    RogerLogScope logScope("MaterializeRogerNames 2: go over items", !getLangOpts().RogerVerbose);
     logScope.outs_nl() << Name;
     if (NamedDecl *nd = dyn_cast<NamedDecl>(dc)) {
       logScope.outs() << " in ";
@@ -294,14 +294,14 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::PREPARSING) {
-    RogerLogScope logScope("RequireCompleteRecordRoger in preparsing");
+    RogerLogScope logScope("RequireCompleteRecordRoger in preparsing", !getLangOpts().RogerVerbose);
     Rec->printName(logScope.outs_nl());
     logScope.outs() << "\n";
     logScope.outs_nl() << "Required while preparsing\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::FORWARD) {
-    RogerLogScope logScope("RequireCompleteRecordRogerparsing header as required");
+    RogerLogScope logScope("RequireCompleteRecordRogerparsing header as required", !getLangOpts().RogerVerbose);
     Rec->printName(logScope.outs_nl());
     logScope.outs() << "\n";
     assert(state->parseHeader);
@@ -315,14 +315,14 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
     return true;
   }
   if (state->currentStep == RecordDecl::RogerState::FILLING_NAMES) {
-    RogerLogScope logScope("RequireCompleteRecordRoger in filling names");
+    RogerLogScope logScope("RequireCompleteRecordRoger in filling names", !getLangOpts().RogerVerbose);
     Rec->printName(logScope.outs_nl());
     logScope.outs() << "\n";
     logScope.outs_nl() << "Required while filling names\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::PREPARSE_DONE) {
-    RogerLogScope logScope("RequireCompleteRecordRoger filling names as required");
+    RogerLogScope logScope("RequireCompleteRecordRoger filling names as required", !getLangOpts().RogerVerbose);
     Rec->printName(logScope.outs_nl());
     logScope.outs() << "\n";
     assert(Rec->RogerNameFillCallback);
@@ -336,14 +336,14 @@ bool Sema::RequireCompleteRecordRoger(RecordDecl *Rec, RogerRequireCompleteReaso
     return true;
   }
   if (state->currentStep == RecordDecl::RogerState::COMPLETING) {
-    RogerLogScope logScope("RequireCompleteRecordRoger in completing");
+    RogerLogScope logScope("RequireCompleteRecordRoger in completing", !getLangOpts().RogerVerbose);
     Rec->printName(logScope.outs_nl());
     logScope.outs() << "\n";
     logScope.outs_nl() << "Required while completing\n";
     return false;
   }
   if (state->currentStep == RecordDecl::RogerState::FILL_NAMES_DONE) {
-    RogerLogScope logScope("RequireCompleteRecordRoger completing record as required");
+    RogerLogScope logScope("RequireCompleteRecordRoger completing record as required", !getLangOpts().RogerVerbose);
     state->currentStep = RecordDecl::RogerState::COMPLETING;
 
     Rec->printName(logScope.outs_nl());
@@ -659,7 +659,7 @@ void Sema::RogerDefineRecord(CXXRecordDecl *decl) {
 }
 
 void Sema::RogerDefineFunction(const FunctionDecl *FunDecl) {
-  RogerLogScope logScope("RogerDefineFunction");
+  RogerLogScope logScope("RogerDefineFunction", !getLangOpts().RogerVerbose);
   FunDecl->printQualifiedName(logScope.outs_nl());
   logScope.outs() << "\n";
   if (FunDecl->rogerDeferredBodyParse) {
@@ -671,7 +671,7 @@ void Sema::RogerDefineFunction(const FunctionDecl *FunDecl) {
 }
 
 void Sema::RogerParseFunctionArguments(FunctionDecl *FunDecl) {
-  RogerLogScope logScope("RogerParseFunctionArguments");
+  RogerLogScope logScope("RogerParseFunctionArguments", !getLangOpts().RogerVerbose);
   FunDecl->printQualifiedName(logScope.outs_nl());
   logScope.outs() << "\n";
   if (FunDecl->rogerDeferredDeclarationParse) {
@@ -693,5 +693,3 @@ void Sema::ActOnRogerModeFinish() {
 bool Sema::IsInRogerMode() {
   return this->RogerOnDemandParser;
 }
-
-const bool Sema::RogerLogScope::mute = false;
