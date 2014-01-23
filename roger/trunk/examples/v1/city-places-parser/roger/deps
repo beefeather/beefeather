@@ -15,7 +15,7 @@ prolog.cpp
 
 
 V8:
-SVN /home/peter/clang-roger/tests/city-places-parser/v8  @7688
+SVN http://v8.googlecode.com/svn/trunk/include  @7688
 
 CURLPP:
 download http://code.google.com/p/curlpp/downloads/detail?name=curlpp-0.7.3.tar.gz
