@@ -413,7 +413,8 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
       Executable = "./roger_parse_overview";
     } else {
       assert(getLangOpts().RogerPathToOverviewParser[0] == '=' && "Path to overview parser must be specified with '='");
-      Executable = getLangOpts().RogerPathToOverviewParser.substr(1);
+      Executable = getLangOpts().RogerPathToOverviewParser;
+      Executable = Executable.substr(1);
     }
     SmallVector<const char*, 5> Argv;
     Argv.push_back(Executable.data());
@@ -669,6 +670,23 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   RogerFileVector files;
 
+  ConsumeToken();
+
+  // Rest of source.
+  {
+    RogerFile* file = new RogerFile;
+
+    const char *nofilePath = 0;
+    DeclContext *nsContext = ParseRogerNamespaceHeader(nofilePath);
+
+    file->nsContext = nsContext;
+    file->range.begin = Toks.size();
+    ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, Toks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
+    file->range.end = Toks.size();
+    files.push_back(file);
+  }
+
+  // Files in directory.
   {
     FileID mainFileId = PP.getSourceManager().getMainFileID();
     const FileEntry *mainFileEn = PP.getSourceManager().getFileEntryForID(mainFileId);
