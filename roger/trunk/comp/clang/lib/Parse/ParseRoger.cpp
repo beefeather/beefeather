@@ -673,7 +673,7 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
   ConsumeToken();
 
   // Rest of source.
-  {
+  while (true) {
     RogerFile* file = new RogerFile;
 
     const char *nofilePath = 0;
@@ -684,6 +684,12 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
     ConsumeAndStoreUntil(tok::eof, tok::kw_capybara, Toks, /*StopAtSemi=*/false, /*ConsumeFinalToken=*/false);
     file->range.end = Toks.size();
     files.push_back(file);
+
+    if (Tok.is(tok::kw_capybara)) {
+      ConsumeToken();
+    } else {
+      break;
+    }
   }
 
   // Files in directory.
