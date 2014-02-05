@@ -14,6 +14,7 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LangOptions.h"
@@ -130,6 +131,11 @@ Sema::getTemplateInstantiationArgs(NamedDecl *D,
         assert(Function->getPrimaryTemplate() && "No function template?");
         if (Function->getPrimaryTemplate()->isMemberSpecialization())
           break;
+
+        // If this function is a generic lambda specialization, we are done.
+        if (isGenericLambdaCallOperatorSpecialization(Function))
+          break;
+
       } else if (FunctionTemplateDecl *FunTmpl
                                    = Function->getDescribedFunctionTemplate()) {
         // Add the "injected" template arguments.
@@ -911,13 +917,38 @@ namespace {
     }
 
     ExprResult TransformLambdaScope(LambdaExpr *E,
-                                    CXXMethodDecl *CallOperator) {
-      CallOperator->setInstantiationOfMemberFunction(E->getCallOperator(),
-                                                     TSK_ImplicitInstantiation);
-      return TreeTransform<TemplateInstantiator>::
-         TransformLambdaScope(E, CallOperator);
+        CXXMethodDecl *NewCallOperator, 
+        ArrayRef<InitCaptureInfoTy> InitCaptureExprsAndTypes) {
+      CXXMethodDecl *const OldCallOperator = E->getCallOperator();   
+      // In the generic lambda case, we set the NewTemplate to be considered
+      // an "instantiation" of the OldTemplate.
+      if (FunctionTemplateDecl *const NewCallOperatorTemplate = 
+            NewCallOperator->getDescribedFunctionTemplate()) {
+        
+        FunctionTemplateDecl *const OldCallOperatorTemplate = 
+                              OldCallOperator->getDescribedFunctionTemplate();
+        NewCallOperatorTemplate->setInstantiatedFromMemberTemplate(
+                                                     OldCallOperatorTemplate);
+        // Mark the NewCallOperatorTemplate a specialization.  
+        NewCallOperatorTemplate->setMemberSpecialization();
+      } else 
+        // For a non-generic lambda we set the NewCallOperator to 
+        // be an instantiation of the OldCallOperator.
+        NewCallOperator->setInstantiationOfMemberFunction(OldCallOperator,
+                                                    TSK_ImplicitInstantiation);
+      
+      return inherited::TransformLambdaScope(E, NewCallOperator, 
+          InitCaptureExprsAndTypes);
     }
-
+    TemplateParameterList *TransformTemplateParameterList(
+                              TemplateParameterList *OrigTPL)  {
+      if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
+         
+      DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
+      TemplateDeclInstantiator  DeclInstantiator(getSema(), 
+                        /* DeclContext *Owner */ Owner, TemplateArgs);
+      return DeclInstantiator.SubstTemplateParams(OrigTPL); 
+    }
   private:
     ExprResult transformNonTypeTemplateParmRef(NonTypeTemplateParmDecl *parm,
                                                SourceLocation loc,
@@ -2435,6 +2466,11 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
                               CXXRecordDecl *Instantiation,
                         const MultiLevelTemplateArgumentList &TemplateArgs,
                               TemplateSpecializationKind TSK) {
+  assert(
+      (TSK == TSK_ExplicitInstantiationDefinition ||
+       TSK == TSK_ExplicitInstantiationDeclaration ||
+       (TSK == TSK_ImplicitInstantiation && Instantiation->isLocalClass())) &&
+      "Unexpected template specialization kind!");
   for (DeclContext::decl_iterator D = Instantiation->decls_begin(),
                                DEnd = Instantiation->decls_end();
        D != DEnd; ++D) {
@@ -2475,6 +2511,9 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
           InstantiateFunctionDefinition(PointOfInstantiation, Function);
         } else {
           Function->setTemplateSpecializationKind(TSK, PointOfInstantiation);
+          if (TSK == TSK_ImplicitInstantiation)
+            PendingLocalImplicitInstantiations.push_back(
+                std::make_pair(Function, PointOfInstantiation));
         }
       }
     } else if (VarDecl *Var = dyn_cast<VarDecl>(*D)) {

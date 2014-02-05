@@ -2506,7 +2506,7 @@ DeclarationName InitializedEntity::getName() const {
     return VariableOrMember->getDeclName();
 
   case EK_LambdaCapture:
-    return Capture.Var->getDeclName();
+    return DeclarationName(Capture.VarID);
       
   case EK_Result:
   case EK_Exception:
@@ -2608,7 +2608,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_BlockElement: OS << "Block"; break;
   case EK_LambdaCapture:
     OS << "LambdaCapture ";
-    getCapturedVar()->printName(OS);
+    OS << DeclarationName(Capture.VarID);
     break;
   }
 
@@ -6297,6 +6297,28 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
   }
 }
 
+static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
+                             InitListExpr *InitList) {
+  QualType DestType = Entity.getType();
+
+  QualType E;
+  if (S.getLangOpts().CPlusPlus11 && S.isStdInitializerList(DestType, &E)) {
+    QualType ArrayType = S.Context.getConstantArrayType(
+        E.withConst(),
+        llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
+                    InitList->getNumInits()),
+        clang::ArrayType::Normal, 0);
+    InitializedEntity HiddenArray =
+        InitializedEntity::InitializeTemporary(ArrayType);
+    return diagnoseListInit(S, HiddenArray, InitList);
+  }
+
+  InitListChecker DiagnoseInitList(S, Entity, InitList, DestType,
+                                   /*VerifyOnly=*/false);
+  assert(DiagnoseInitList.HadError() &&
+         "Inconsistent init list check result.");
+}
+
 bool InitializationSequence::Diagnose(Sema &S,
                                       const InitializedEntity &Entity,
                                       const InitializationKind &Kind,
@@ -6344,7 +6366,7 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:
-    S.Diag(Kind.getLocation(), 
+    S.Diag(Kind.getLocation(),
            (Failure == FK_ArrayTypeMismatch
               ? diag::err_array_init_different_type
               : diag::err_array_init_non_constant_array))
@@ -6636,12 +6658,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_ListInitializationFailed: {
     // Run the init list checker again to emit diagnostics.
-    InitListExpr* InitList = cast<InitListExpr>(Args[0]);
-    QualType DestType = Entity.getType();
-    InitListChecker DiagnoseInitList(S, Entity, InitList,
-            DestType, /*VerifyOnly=*/false);
-    assert(DiagnoseInitList.HadError() &&
-           "Inconsistent init list check result.");
+    InitListExpr *InitList = cast<InitListExpr>(Args[0]);
+    diagnoseListInit(S, Entity, InitList);
     break;
   }
 
@@ -6862,13 +6880,13 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case SK_ConversionSequence:
       OS << "implicit conversion sequence (";
-      S->ICS->DebugPrint(); // FIXME: use OS
+      S->ICS->dump(); // FIXME: use OS
       OS << ")";
       break;
 
     case SK_ConversionSequenceNoNarrowing:
       OS << "implicit conversion sequence with narrowing prohibited (";
-      S->ICS->DebugPrint(); // FIXME: use OS
+      S->ICS->dump(); // FIXME: use OS
       OS << ")";
       break;
 
@@ -6984,11 +7002,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
     S.Diag(PostInit->getLocStart(),
-           S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11? 
-             diag::warn_init_list_type_narrowing
-           : S.isSFINAEContext()?
-             diag::err_init_list_type_narrowing_sfinae
-           : diag::err_init_list_type_narrowing)
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_type_narrowing
+               : diag::ext_init_list_type_narrowing)
       << PostInit->getSourceRange()
       << PreNarrowingType.getLocalUnqualifiedType()
       << EntityType.getLocalUnqualifiedType();
@@ -6997,11 +7013,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   case NK_Constant_Narrowing:
     // A constant value was narrowed.
     S.Diag(PostInit->getLocStart(),
-           S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11? 
-             diag::warn_init_list_constant_narrowing
-           : S.isSFINAEContext()?
-             diag::err_init_list_constant_narrowing_sfinae
-           : diag::err_init_list_constant_narrowing)
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_constant_narrowing
+               : diag::ext_init_list_constant_narrowing)
       << PostInit->getSourceRange()
       << ConstantValue.getAsString(S.getASTContext(), ConstantType)
       << EntityType.getLocalUnqualifiedType();
@@ -7010,11 +7024,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   case NK_Variable_Narrowing:
     // A variable's value may have been narrowed.
     S.Diag(PostInit->getLocStart(),
-           S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11? 
-             diag::warn_init_list_variable_narrowing
-           : S.isSFINAEContext()?
-             diag::err_init_list_variable_narrowing_sfinae
-           : diag::err_init_list_variable_narrowing)
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_variable_narrowing
+               : diag::ext_init_list_variable_narrowing)
       << PostInit->getSourceRange()
       << PreNarrowingType.getLocalUnqualifiedType()
       << EntityType.getLocalUnqualifiedType();

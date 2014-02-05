@@ -151,3 +151,51 @@ struct S {
   void f() { my_menber = 1; }  // expected-error {{use of undeclared identifier 'my_menber'; did you mean 'my_member'?}}
 };
 }
+
+namespace PR17019 {
+  template<class F>
+  struct evil {
+    evil(F de) {  // expected-note {{'de' declared here}}
+      de_;  // expected-error {{use of undeclared identifier 'de_'; did you mean 'de'?}} \
+            // expected-warning {{expression result unused}}
+    }
+    ~evil() {
+      de_->bar()  // expected-error {{use of undeclared identifier 'de_'}}
+    }
+  };
+
+  void meow() {
+    evil<int> Q(0); // expected-note {{in instantiation of member function}}
+  }
+}
+
+namespace fix_class_name_qualifier {
+class MessageHeaders {};
+class MessageUtils {
+ public:
+  static void ParseMessageHeaders(int, int); // expected-note {{'MessageUtils::ParseMessageHeaders' declared here}}
+};
+
+void test() {
+  // No, we didn't mean to call MessageHeaders::MessageHeaders.
+  MessageHeaders::ParseMessageHeaders(5, 4); // expected-error {{no member named 'ParseMessageHeaders' in 'fix_class_name_qualifier::MessageHeaders'; did you mean 'MessageUtils::ParseMessageHeaders'?}}
+}
+}
+
+namespace PR18213 {  // expected-note {{'PR18213' declared here}}
+struct WrapperInfo {
+  int i;
+};
+
+template <typename T> struct Wrappable {
+  static WrapperInfo kWrapperInfo;
+};
+
+// Note the space before "::PR18213" is intended and needed, as it highlights
+// the actual typo, which is the leading "::".
+// TODO: Suggest removing the "::" from "::PR18213" (the right correction)
+// instead of incorrectly suggesting dropping "PR18213::WrapperInfo::".
+template <>
+PR18213::WrapperInfo ::PR18213::Wrappable<int>::kWrapperInfo = { 0 };  // expected-error {{no member named 'PR18213' in 'PR18213::WrapperInfo'; did you mean simply 'PR18213'?}} \
+                                                                       // expected-error {{C++ requires a type specifier for all declarations}}
+}

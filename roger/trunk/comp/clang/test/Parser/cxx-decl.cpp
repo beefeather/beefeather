@@ -108,9 +108,9 @@ template<class T>
 class Class1;
 
 class Class2 {
-}  // no ;
+} // expected-error {{expected ';' after class}}
 
-typedef Class1<Class2> Type1; // expected-error {{cannot combine with previous 'class' declaration specifier}}
+typedef Class1<Class2> Type1;
 
 // rdar : // 8307865
 struct CodeCompleteConsumer {
@@ -221,6 +221,15 @@ void foo() {
                             // expected-error {{expected a qualified name after 'typename'}} \
                             // expected-warning {{'template' keyword outside of a template}}
 }
+}
+
+namespace PR17567 {
+  struct Foobar { // expected-note 2{{declared here}}
+    FooBar(); // expected-error {{missing return type for function 'FooBar'; did you mean the constructor name 'Foobar'?}}
+    ~FooBar(); // expected-error {{expected the class name after '~' to name a destructor}}
+  };
+  FooBar::FooBar() {} // expected-error {{undeclared}} expected-error {{missing return type}}
+  FooBar::~FooBar() {} // expected-error {{undeclared}} expected-error {{expected the class name}}
 }
 
 // PR8380

@@ -1431,7 +1431,7 @@ Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *cl
       if (ParseTemplateParameters(CurTemplateDepthTracker.getDepth(),
                                   TemplateParams, LAngleLoc, RAngleLoc)) {
         // Skip until the semi-colon or a }.
-        SkipUntil(tok::r_brace, true, true);
+        SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
         if (Tok.is(tok::semi))
           ConsumeToken();
         return Parser::DeclGroupPtrTy();
@@ -1584,7 +1584,7 @@ Decl *Parser::ParseRogerClassForwardDecl(RogerClassDecl *classDecl, RogerFile *f
 
       //DS.SetTypeSpecError();
       typeSpecError = true;
-      SkipUntil(tok::semi, false, true);
+      SkipUntil(tok::semi, StopBeforeMatch);
       return 0;
     }
   }
@@ -1907,7 +1907,7 @@ void Parser::ParseLexedRogerStaticVarInitializer(LateParsedStaticVarInitializer:
     ConsumeToken();
     ExprResult Init(ParseInitializer());
     if (Init.isInvalid()) {
-      SkipUntil(tok::comma, true, true);
+      SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
       Actions.ActOnInitializerError(ThisDecl);
     } else {
       Actions.AddInitializerToDecl(ThisDecl, Init.take(),

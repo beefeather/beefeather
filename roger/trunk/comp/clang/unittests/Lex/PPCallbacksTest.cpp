@@ -85,7 +85,7 @@ public:
 class PragmaOpenCLExtensionCallbacks : public PPCallbacks {
 public:
   typedef struct {
-    StringRef Name;
+    SmallString<16> Name;
     unsigned State;
   } CallbackParameters;
 
@@ -95,13 +95,13 @@ public:
     clang::SourceLocation NameLoc, const clang::IdentifierInfo *Name,
     clang::SourceLocation StateLoc, unsigned State) {
       this->NameLoc = NameLoc;
-      this->Name = Name->getName().str();
+      this->Name = Name->getName();
       this->StateLoc = StateLoc;
       this->State = State;
   };
 
   SourceLocation NameLoc;
-  StringRef Name;
+  SmallString<16> Name;
   SourceLocation StateLoc;
   unsigned State;
 };
@@ -162,7 +162,8 @@ protected:
     VoidModuleLoader ModLoader;
 
     IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts = new HeaderSearchOptions();
-    HeaderSearch HeaderInfo(HSOpts, FileMgr, Diags, LangOpts, Target.getPtr());
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts,
+                            Target.getPtr());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     IntrusiveRefCntPtr<PreprocessorOptions> PPOpts = new PreprocessorOptions();
@@ -198,7 +199,7 @@ protected:
     (void)SourceMgr.createMainFileIDForMemBuffer(sourceBuf);
 
     VoidModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(new HeaderSearchOptions, FileMgr, Diags, 
+    HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, 
                             OpenCLLangOpts, Target.getPtr());
 
     Preprocessor PP(new PreprocessorOptions(), Diags, OpenCLLangOpts, 
@@ -230,7 +231,7 @@ protected:
     }
 
     PragmaOpenCLExtensionCallbacks::CallbackParameters RetVal = {
-      Callbacks->Name.str(),
+      Callbacks->Name,
       Callbacks->State
     };
     return RetVal;    

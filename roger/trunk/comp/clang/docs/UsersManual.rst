@@ -921,6 +921,8 @@ are listed below.
       destination.
    -  ``-fsanitize=float-divide-by-zero``: Floating point division by
       zero.
+   -  ``-fsanitize=function``: Indirect call of a function through a
+      function pointer of the wrong type (Linux, C++ and x86/x86_64 only).
    -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
    -  ``-fsanitize=null``: Use of a null pointer or creation of a null
       reference.
@@ -1044,6 +1046,26 @@ are listed below.
    selected model is not supported by the target, or if a more
    efficient model can be used. The TLS model can be overridden per
    variable using the ``tls_model`` attribute.
+
+.. option:: -mhwdiv=[values]
+
+   Select the ARM modes (arm or thumb) that support hardware division
+   instructions.
+
+   Valid values are: ``arm``, ``thumb`` and ``arm,thumb``.
+   This option is used to indicate which mode (arm or thumb) supports
+   hardware division instructions. This only applies to the ARM
+   architecture.
+
+.. option:: -m[no-]crc
+
+   Enable or disable CRC instructions.
+
+   This option is used to indicate whether CRC instructions are to
+   be generated. This only applies to the ARM architecture.
+
+   CRC instructions are enabled by default on ARMv8.
+
 
 Controlling Size of Debug Information
 -------------------------------------
@@ -1216,23 +1238,23 @@ Microsoft extensions
 --------------------
 
 clang has some experimental support for extensions from Microsoft Visual
-C++; to enable it, use the -fms-extensions command-line option. This is
+C++; to enable it, use the ``-fms-extensions`` command-line option. This is
 the default for Windows targets. Note that the support is incomplete.
-Some constructs such as dllexport on classes are ignored with a warning,
+Some constructs such as ``dllexport`` on classes are ignored with a warning,
 and others such as `Microsoft IDL annotations
 <http://msdn.microsoft.com/en-us/library/8tesw2eh.aspx>`_ are silently
 ignored.
 
-clang has a -fms-compatibility flag that makes clang accept enough
+clang has a ``-fms-compatibility`` flag that makes clang accept enough
 invalid C++ to be able to parse most Microsoft headers. For example, it
 allows `unqualified lookup of dependent base class members
 <http://clang.llvm.org/compatibility.html#dep_lookup_bases>`_, which is
 a common compatibility issue with clang. This flag is enabled by default
 for Windows targets.
 
--fdelayed-template-parsing lets clang delay all template instantiation
-until the end of a translation unit. This flag is enabled by default for
-Windows targets.
+``-fdelayed-template-parsing`` lets clang delay parsing of function template
+definitions until the end of a translation unit. This flag is enabled by
+default for Windows targets.
 
 -  clang allows setting ``_MSC_VER`` with ``-fmsc-version=``. It defaults to
    1700 which is the same as Visual C/C++ 2012. Any number is supported
@@ -1258,8 +1280,8 @@ C++ Language Features
 =====================
 
 clang fully implements all of standard C++98 except for exported
-templates (which were removed in C++11), and `many C++11
-features <http://clang.llvm.org/cxx_status.html>`_ are also implemented.
+templates (which were removed in C++11), and all of standard C++11
+and the current draft standard for C++1y.
 
 Controlling implementation limits
 ---------------------------------
@@ -1277,7 +1299,12 @@ Controlling implementation limits
 .. option:: -ftemplate-depth=N
 
   Sets the limit for recursively nested template instantiations to N.  The
-  default is 1024.
+  default is 256.
+
+.. option:: -foperator-arrow-depth=N
+
+  Sets the limit for iterative calls to 'operator->' functions to N.  The
+  default is 256.
 
 .. _objc:
 
@@ -1306,8 +1333,8 @@ Darwin (Mac OS/X), Linux, FreeBSD, and Dragonfly BSD: it has been tested
 to correctly compile many large C, C++, Objective-C, and Objective-C++
 codebases.
 
-On ``x86_64-mingw32``, passing i128(by value) is incompatible to Microsoft
-x64 calling conversion. You might need to tweak
+On ``x86_64-mingw32``, passing i128(by value) is incompatible with the
+Microsoft x64 calling conversion. You might need to tweak
 ``WinX86_64ABIInfo::classify()`` in lib/CodeGen/TargetInfo.cpp.
 
 ARM
@@ -1358,7 +1385,8 @@ None
 Windows
 ^^^^^^^
 
-Experimental supports are on Cygming.
+Clang has experimental support for targeting "Cygming" (Cygwin / MinGW)
+platforms.
 
 See also :ref:`Microsoft Extensions <c_ms>`.
 
@@ -1456,6 +1484,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
     /c                     Compile only
     /D <macro[=value]>     Define macro
     /fallback              Fall back to cl.exe if clang-cl fails to compile
+    /FA                    Output assembly code file during compilation
+    /Fa<file or directory> Output assembly code to this file during compilation
     /Fe<file or directory> Set output executable file or directory (ends in / or \)
     /FI<value>             Include file before parsing
     /Fo<file or directory> Set output object file, or directory (ends in / or \)

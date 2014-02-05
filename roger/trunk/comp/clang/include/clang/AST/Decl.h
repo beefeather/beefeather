@@ -273,6 +273,13 @@ public:
     return const_cast<NamedDecl*>(this)->getUnderlyingDecl();
   }
 
+  NamedDecl *getMostRecentDecl() {
+    return cast<NamedDecl>(static_cast<Decl *>(this)->getMostRecentDecl());
+  }
+  const NamedDecl *getMostRecentDecl() const {
+    return const_cast<NamedDecl*>(this)->getMostRecentDecl();
+  }
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstNamed && K <= lastNamed; }
 };
@@ -368,6 +375,7 @@ public:
   using redeclarable_base::redecls_end;
   using redeclarable_base::getPreviousDecl;
   using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   /// \brief Returns true if this is an anonymous namespace declaration.
   ///
@@ -394,7 +402,7 @@ public:
 
   /// \brief Get the original (first) namespace declaration.
   NamespaceDecl *getOriginalNamespace() {
-    if (isFirstDeclaration())
+    if (isFirstDecl())
       return this;
 
     return AnonOrFirstNamespaceAndInline.getPointer();
@@ -402,7 +410,7 @@ public:
 
   /// \brief Get the original (first) namespace declaration.
   const NamespaceDecl *getOriginalNamespace() const {
-    if (isFirstDeclaration())
+    if (isFirstDecl())
       return this;
 
     return AnonOrFirstNamespaceAndInline.getPointer();
@@ -411,9 +419,7 @@ public:
   /// \brief Return true if this declaration is an original (first) declaration
   /// of the namespace. This is false for non-original (subsequent) namespace
   /// declarations and anonymous namespaces.
-  bool isOriginalNamespace() const {
-    return isFirstDeclaration();
-  }
+  bool isOriginalNamespace() const { return isFirstDecl(); }
 
   /// \brief Retrieve the anonymous namespace nested inside this namespace,
   /// if any.
@@ -780,6 +786,7 @@ public:
   using redeclarable_base::redecls_end;
   using redeclarable_base::getPreviousDecl;
   using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   static VarDecl *Create(ASTContext &C, DeclContext *DC,
                          SourceLocation StartLoc, SourceLocation IdLoc,
@@ -845,18 +852,19 @@ public:
            getStorageClass() == SC_PrivateExtern;
   }
 
-  /// hasGlobalStorage - Returns true for all variables that do not
-  ///  have local storage.  This includs all global variables as well
-  ///  as static variables declared within a function.
+  /// \brief Returns true for all variables that do not have local storage.
+  ///
+  /// This includes all global variables as well as static variables declared
+  /// within a function.
   bool hasGlobalStorage() const { return !hasLocalStorage(); }
 
-  /// \brief Get the storage duration of this variable, per C++ [basid.stc].
+  /// \brief Get the storage duration of this variable, per C++ [basic.stc].
   StorageDuration getStorageDuration() const {
     return hasLocalStorage() ? SD_Automatic :
            getTSCSpec() ? SD_Thread : SD_Static;
   }
 
-  /// Compute the language linkage.
+  /// \brief Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
 
   /// \brief Determines whether this variable is a variable with
@@ -1573,6 +1581,7 @@ public:
   using redeclarable_base::redecls_end;
   using redeclarable_base::getPreviousDecl;
   using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   static FunctionDecl *Create(ASTContext &C, DeclContext *DC,
                               SourceLocation StartLoc, SourceLocation NLoc,
@@ -1792,6 +1801,11 @@ public:
   ///    An implementation is allowed to omit a call to a replaceable global
   ///    allocation function. [...]
   bool isReplaceableGlobalAllocationFunction() const;
+
+  /// \brief Determine whether this function is a sized global deallocation
+  /// function in C++1y. If so, find and return the corresponding unsized
+  /// deallocation function.
+  FunctionDecl *getCorrespondingUnsizedGlobalDeallocationFunction() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -2237,12 +2251,8 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY;
 
   /// Retrieves the canonical declaration of this field.
-  FieldDecl *getCanonicalDecl() {
-    return getFirstDeclaration();
-  }
-  const FieldDecl *getCanonicalDecl() const {
-    return getFirstDeclaration();
-  }
+  FieldDecl *getCanonicalDecl() { return getFirstDecl(); }
+  const FieldDecl *getCanonicalDecl() const { return getFirstDecl(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2256,7 +2266,7 @@ public:
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
-class EnumConstantDecl : public ValueDecl {
+class EnumConstantDecl : public ValueDecl, public Mergeable<EnumConstantDecl> {
   Stmt *Init; // an integer constant expression
   llvm::APSInt Val; // The value.
 protected:
@@ -2281,6 +2291,10 @@ public:
   void setInitVal(const llvm::APSInt &V) { Val = V; }
 
   SourceRange getSourceRange() const LLVM_READONLY;
+
+  /// Retrieves the canonical declaration of this enumerator.
+  EnumConstantDecl *getCanonicalDecl() { return getFirstDecl(); }
+  const EnumConstantDecl *getCanonicalDecl() const { return getFirstDecl(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2406,6 +2420,7 @@ public:
   using redeclarable_base::redecls_end;
   using redeclarable_base::getPreviousDecl;
   using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   bool isModed() const { return MaybeModedTInfo.is<ModedTInfo*>(); }
 
@@ -2427,12 +2442,8 @@ public:
   }
 
   /// Retrieves the canonical declaration of this typedef-name.
-  TypedefNameDecl *getCanonicalDecl() {
-    return getFirstDeclaration();
-  }
-  const TypedefNameDecl *getCanonicalDecl() const {
-    return getFirstDeclaration();
-  }
+  TypedefNameDecl *getCanonicalDecl() { return getFirstDecl(); }
+  const TypedefNameDecl *getCanonicalDecl() const { return getFirstDecl(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2572,7 +2583,7 @@ protected:
         NamedDeclOrQualifier((NamedDecl *)0) {
     assert((DK != Enum || TK == TTK_Enum) &&
            "EnumDecl not matched with TTK_Enum");
-    setPreviousDeclaration(PrevDecl);
+    setPreviousDecl(PrevDecl);
   }
 
   typedef Redeclarable<TagDecl> redeclarable_base;
@@ -2598,6 +2609,7 @@ public:
   using redeclarable_base::redecls_end;
   using redeclarable_base::getPreviousDecl;
   using redeclarable_base::getMostRecentDecl;
+  using redeclarable_base::isFirstDecl;
 
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
@@ -2833,21 +2845,22 @@ public:
     return cast<EnumDecl>(TagDecl::getCanonicalDecl());
   }
   const EnumDecl *getCanonicalDecl() const {
-    return cast<EnumDecl>(TagDecl::getCanonicalDecl());
+    return const_cast<EnumDecl*>(this)->getCanonicalDecl();
   }
 
-  const EnumDecl *getPreviousDecl() const {
-    return cast_or_null<EnumDecl>(TagDecl::getPreviousDecl());
-  }
   EnumDecl *getPreviousDecl() {
-    return cast_or_null<EnumDecl>(TagDecl::getPreviousDecl());
+    return cast_or_null<EnumDecl>(
+            static_cast<TagDecl *>(this)->getPreviousDecl());
+  }
+  const EnumDecl *getPreviousDecl() const {
+    return const_cast<EnumDecl*>(this)->getPreviousDecl();
   }
 
-  const EnumDecl *getMostRecentDecl() const {
-    return cast<EnumDecl>(TagDecl::getMostRecentDecl());
-  }
   EnumDecl *getMostRecentDecl() {
-    return cast<EnumDecl>(TagDecl::getMostRecentDecl());
+    return cast<EnumDecl>(static_cast<TagDecl *>(this)->getMostRecentDecl());
+  }
+  const EnumDecl *getMostRecentDecl() const {
+    return const_cast<EnumDecl*>(this)->getMostRecentDecl();
   }
 
   EnumDecl *getDefinition() const {
@@ -3043,18 +3056,19 @@ public:
                             IdentifierInfo *Id, RecordDecl* PrevDecl = 0);
   static RecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
-  const RecordDecl *getPreviousDecl() const {
-    return cast_or_null<RecordDecl>(TagDecl::getPreviousDecl());
-  }
   RecordDecl *getPreviousDecl() {
-    return cast_or_null<RecordDecl>(TagDecl::getPreviousDecl());
+    return cast_or_null<RecordDecl>(
+            static_cast<TagDecl *>(this)->getPreviousDecl());
+  }
+  const RecordDecl *getPreviousDecl() const {
+    return const_cast<RecordDecl*>(this)->getPreviousDecl();
   }
 
-  const RecordDecl *getMostRecentDecl() const {
-    return cast<RecordDecl>(TagDecl::getMostRecentDecl());
-  }
   RecordDecl *getMostRecentDecl() {
-    return cast<RecordDecl>(TagDecl::getMostRecentDecl());
+    return cast<RecordDecl>(static_cast<TagDecl *>(this)->getMostRecentDecl());
+  }
+  const RecordDecl *getMostRecentDecl() const {
+    return const_cast<RecordDecl*>(this)->getMostRecentDecl();
   }
 
   bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
@@ -3528,7 +3542,7 @@ inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
 }
 
 template<typename decl_type>
-void Redeclarable<decl_type>::setPreviousDeclaration(decl_type *PrevDecl) {
+void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
   // Note: This routine is implemented here because we need both NamedDecl
   // and Redeclarable to be defined.
 
@@ -3538,7 +3552,7 @@ void Redeclarable<decl_type>::setPreviousDeclaration(decl_type *PrevDecl) {
     // Point to previous. Make sure that this is actually the most recent
     // redeclaration, or we can build invalid chains. If the most recent
     // redeclaration is invalid, it won't be PrevDecl, but we want it anyway.
-    First = PrevDecl->getFirstDeclaration();
+    First = PrevDecl->getFirstDecl();
     assert(First->RedeclLink.NextIsLatest() && "Expected first");
     decl_type *MostRecent = First->RedeclLink.getNext();
     RedeclLink = PreviousDeclLink(cast<decl_type>(MostRecent));

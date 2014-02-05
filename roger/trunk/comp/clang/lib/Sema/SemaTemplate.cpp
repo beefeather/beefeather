@@ -877,10 +877,11 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
       // FIXME: Horrible, horrible hack! We can't currently represent this
       // in the AST, and historically we have just ignored such friend
       // class templates, so don't complain here.
-      if (TUK != TUK_Friend)
-        Diag(NameLoc, diag::err_template_qualified_declarator_no_match)
+      Diag(NameLoc, TUK == TUK_Friend
+                        ? diag::warn_template_qualified_friend_ignored
+                        : diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return true;
+      return TUK != TUK_Friend;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -4361,9 +4362,9 @@ CheckTemplateArgumentAddressOfObjectOrFunction(Sema &S,
   ValueDecl *Entity = DRE->getDecl();
 
   // Cannot refer to non-static data members
-  if (FieldDecl *Field = dyn_cast<FieldDecl>(Entity)) {
+  if (isa<FieldDecl>(Entity) || isa<IndirectFieldDecl>(Entity)) {
     S.Diag(Arg->getLocStart(), diag::err_template_arg_field)
-      << Field << Arg->getSourceRange();
+      << Entity << Arg->getSourceRange();
     S.Diag(Param->getLocation(), diag::note_template_param_here);
     return true;
   }
@@ -4587,9 +4588,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
   else if ((DRE = dyn_cast<DeclRefExpr>(Arg))) {
     if (ValueDecl *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
       if (VD->getType()->isMemberPointerType()) {
-        if (isa<NonTypeTemplateParmDecl>(VD) ||
-            (isa<VarDecl>(VD) &&
-             S.Context.getCanonicalType(VD->getType()).isConstQualified())) {
+        if (isa<NonTypeTemplateParmDecl>(VD)) {
           if (Arg->isTypeDependent() || Arg->isValueDependent()) {
             Converted = TemplateArgument(Arg);
           } else {
@@ -4609,8 +4608,11 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
                   diag::err_template_arg_not_pointer_to_member_form)
       << Arg->getSourceRange();
 
-  if (isa<FieldDecl>(DRE->getDecl()) || isa<CXXMethodDecl>(DRE->getDecl())) {
+  if (isa<FieldDecl>(DRE->getDecl()) ||
+      isa<IndirectFieldDecl>(DRE->getDecl()) ||
+      isa<CXXMethodDecl>(DRE->getDecl())) {
     assert((isa<FieldDecl>(DRE->getDecl()) ||
+            isa<IndirectFieldDecl>(DRE->getDecl()) ||
             !cast<CXXMethodDecl>(DRE->getDecl())->isStatic()) &&
            "Only non-static member pointers can make it here");
 
@@ -5072,7 +5074,8 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
   ValueDecl *VD = cast<ValueDecl>(Arg.getAsDecl());
 
   if (VD->getDeclContext()->isRecord() &&
-      (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD))) {
+      (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD) ||
+       isa<IndirectFieldDecl>(VD))) {
     // If the value is a class member, we might have a pointer-to-member.
     // Determine whether the non-type template template parameter is of
     // pointer-to-member type. If so, we need to build an appropriate
@@ -5459,8 +5462,20 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   while (Ctx && isa<LinkageSpecDecl>(Ctx))
     Ctx = Ctx->getParent();
 
-  if (Ctx && (Ctx->isFileContext() || Ctx->isRecord()))
-    return false;
+  if (Ctx) {
+    if (Ctx->isFileContext())
+      return false;
+    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
+      // C++ [temp.mem]p2:
+      //   A local class shall not have member templates.
+      if (RD->isLocalClass())
+        return Diag(TemplateParams->getTemplateLoc(),
+                    diag::err_template_inside_local_class)
+          << TemplateParams->getSourceRange();
+      else
+        return false;
+    }
+  }
 
   return Diag(TemplateParams->getTemplateLoc(),
               diag::err_template_outside_namespace_or_class_scope)
@@ -6253,7 +6268,10 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
   switch (NewTSK) {
   case TSK_Undeclared:
   case TSK_ImplicitInstantiation:
-    llvm_unreachable("Don't check implicit instantiations here");
+    assert(
+        (PrevTSK == TSK_Undeclared || PrevTSK == TSK_ImplicitInstantiation) &&
+        "previous declaration must be implicit!");
+    return false;
 
   case TSK_ExplicitSpecialization:
     switch (PrevTSK) {
@@ -6484,29 +6502,16 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // it will be a static member function until we know which template it
       // specializes), so adjust it now assuming it specializes this template.
       QualType FT = FD->getType();
-      const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
-      FunctionDecl *TmplFD = FunTmpl->getTemplatedDecl();
       if (FD->isConstexpr()) {
-        CXXMethodDecl *OldMD = dyn_cast<CXXMethodDecl>(TmplFD);
+        CXXMethodDecl *OldMD =
+          dyn_cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl());
         if (OldMD && OldMD->isConst()) {
+          const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
           FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
           EPI.TypeQuals |= Qualifiers::Const;
           FT = Context.getFunctionType(FPT->getResultType(), FPT->getArgTypes(),
                                        EPI);
         }
-      }
-
-      // Ignore differences in calling convention and noreturn until decl
-      // merging.
-      const FunctionProtoType *TmplFT =
-          TmplFD->getType()->castAs<FunctionProtoType>();
-      if (FPT->getCallConv() != TmplFT->getCallConv() ||
-          FPT->getNoReturnAttr() != TmplFT->getNoReturnAttr()) {
-        FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-        EPI.ExtInfo = EPI.ExtInfo.withCallingConv(TmplFT->getCallConv());
-        EPI.ExtInfo = EPI.ExtInfo.withNoReturn(TmplFT->getNoReturnAttr());
-        FT = Context.getFunctionType(FPT->getResultType(), FPT->getArgTypes(),
-                                     EPI);
       }
 
       // C++ [temp.expl.spec]p11:
@@ -6518,9 +6523,9 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // FIXME: It is somewhat wasteful to build
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
       FunctionDecl *Specialization = 0;
-      if (TemplateDeductionResult TDK
-            = DeduceTemplateArguments(FunTmpl, ExplicitTemplateArgs, FT,
-                                      Specialization, Info)) {
+      if (TemplateDeductionResult TDK = DeduceTemplateArguments(
+              cast<FunctionTemplateDecl>(FunTmpl->getFirstDecl()),
+              ExplicitTemplateArgs, FT, Specialization, Info)) {
         // Template argument deduction failed; record why it failed, so
         // that we can provide nifty diagnostics.
         FailedCandidates.addCandidate()
@@ -7434,7 +7439,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     NamedDecl *Prev = *P;
     if (!HasExplicitTemplateArgs) {
       if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Prev)) {
-        if (Context.hasSameUnqualifiedType(Method->getType(), R)) {
+        QualType Adjusted = adjustCCAndNoReturn(R, Method->getType());
+        if (Context.hasSameUnqualifiedType(Method->getType(), Adjusted)) {
           Matches.clear();
 
           Matches.addDecl(Method, P.getAccess());

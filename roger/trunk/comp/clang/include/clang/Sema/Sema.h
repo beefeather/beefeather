@@ -286,6 +286,12 @@ public:
   /// element type here is ExprWithCleanups::Object.
   SmallVector<BlockDecl*, 8> ExprCleanupObjects;
 
+  /// \brief Store a list of either DeclRefExprs or MemberExprs
+  ///  that contain a reference to a variable (constant) that may or may not
+  ///  be odr-used in this Expr, and we won't know until all lvalue-to-rvalue
+  ///  and discarded value conversions have been applied to all subexpressions 
+  ///  of the enclosing full expression.  This is cleared at the end of each 
+  ///  full expression. 
   llvm::SmallPtrSet<Expr*, 2> MaybeODRUseExprs;
 
   /// \brief Stack containing information about each of the nested
@@ -692,7 +698,7 @@ public:
 
     /// \brief The current context is "potentially evaluated" in C++11 terms,
     /// but the expression is evaluated at compile-time (like the values of
-    /// cases in a switch statment).
+    /// cases in a switch statement).
     ConstantEvaluated,
 
     /// \brief The current expression is potentially evaluated at run time,
@@ -1026,7 +1032,7 @@ public:
 
   void PushFunctionScope();
   void PushBlockScope(Scope *BlockScope, BlockDecl *Block);
-  void PushLambdaScope();
+  sema::LambdaScopeInfo *PushLambdaScope();
   
   /// \brief This is used to inform Sema what the current TemplateParameterDepth
   /// is during Parsing.  Currently it is used to pass on the depth
@@ -1606,7 +1612,9 @@ public:
 
   void ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
                                        SourceLocation LocAfterDecls);
-  void CheckForFunctionRedefinition(FunctionDecl *FD);
+  void CheckForFunctionRedefinition(FunctionDecl *FD,
+                                    const FunctionDecl *EffectiveDefinition =
+                                        0);
   Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D);
   Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D);
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
@@ -1664,6 +1672,10 @@ public:
   /// \param Path The module access path.
   DeclResult ActOnModuleImport(SourceLocation AtLoc, SourceLocation ImportLoc,
                                ModuleIdPath Path);
+
+  /// \brief The parser has processed a module import translated from a
+  /// #include or similar preprocessing directive.
+  void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// \brief Create an implicit import of the given module at the given
   /// source location.
@@ -1792,6 +1804,7 @@ public:
   /// member declarations.
   void ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagDecl,
                                        SourceLocation FinalLoc,
+                                       bool IsFinalSpelledSealed,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
@@ -2215,12 +2228,14 @@ public:
                               DeclAccessPair FoundDecl,
                               CXXRecordDecl *ActingContext,
                               Expr *From, QualType ToType,
-                              OverloadCandidateSet& CandidateSet);
+                              OverloadCandidateSet& CandidateSet,
+                              bool AllowObjCConversionOnExplicit = false);
   void AddTemplateConversionCandidate(FunctionTemplateDecl *FunctionTemplate,
                                       DeclAccessPair FoundDecl,
                                       CXXRecordDecl *ActingContext,
                                       Expr *From, QualType ToType,
-                                      OverloadCandidateSet &CandidateSet);
+                                      OverloadCandidateSet &CandidateSet,
+                                    bool AllowObjCConversionOnExplicit = false);
   void AddSurrogateCandidate(CXXConversionDecl *Conversion,
                              DeclAccessPair FoundDecl,
                              CXXRecordDecl *ActingContext,
@@ -2694,6 +2709,16 @@ public:
   /// declared in class 'IFace'.
   bool IvarBacksCurrentMethodAccessor(ObjCInterfaceDecl *IFace,
                                       ObjCMethodDecl *Method, ObjCIvarDecl *IV);
+  
+  /// DiagnoseUnusedBackingIvarInAccessor - Issue an 'unused' warning if ivar which
+  /// backs the property is not used in the property's accessor.
+  void DiagnoseUnusedBackingIvarInAccessor(Scope *S);
+  
+  /// GetIvarBackingPropertyAccessor - If method is a property setter/getter and
+  /// it property has a backing ivar, returns this ivar; otherwise, returns NULL.
+  /// It also returns ivar's property on success.
+  ObjCIvarDecl *GetIvarBackingPropertyAccessor(const ObjCMethodDecl *Method,
+                                               const ObjCPropertyDecl *&PDecl) const;
   
   /// Called by ActOnProperty to handle \@property declarations in
   /// class extensions.
@@ -3211,12 +3236,19 @@ public:
   /// from within the current scope. Only valid when the variable can be
   /// captured.
   ///
+  /// \param FunctionScopeIndexToStopAt If non-null, it points to the index
+  /// of the FunctionScopeInfo stack beyond which we do not attempt to capture.
+  /// This is useful when enclosing lambdas must speculatively capture 
+  /// variables that may or may not be used in certain specializations of
+  /// a nested generic lambda.
+  /// 
   /// \returns true if an error occurred (i.e., the variable cannot be
   /// captured) and false if the capture succeeded.
   bool tryCaptureVariable(VarDecl *Var, SourceLocation Loc, TryCaptureKind Kind,
                           SourceLocation EllipsisLoc, bool BuildAndDiagnose,
                           QualType &CaptureType,
-                          QualType &DeclRefType);
+                          QualType &DeclRefType, 
+                          const unsigned *const FunctionScopeIndexToStopAt);
 
   /// \brief Try to capture the given variable.
   bool tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
@@ -3706,9 +3738,11 @@ public:
 
   void HideUsingShadowDecl(Scope *S, UsingShadowDecl *Shadow);
   bool CheckUsingShadowDecl(UsingDecl *UD, NamedDecl *Target,
-                            const LookupResult &PreviousDecls);
+                            const LookupResult &PreviousDecls,
+                            UsingShadowDecl *&PrevShadow);
   UsingShadowDecl *BuildUsingShadowDecl(Scope *S, UsingDecl *UD,
-                                        NamedDecl *Target);
+                                        NamedDecl *Target,
+                                        UsingShadowDecl *PrevDecl);
 
   bool CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
                                    bool HasTypenameKeyword,
@@ -4136,7 +4170,17 @@ public:
   ///
   /// \param Explicit Whether 'this' is explicitly captured in a lambda
   /// capture list.
-  void CheckCXXThisCapture(SourceLocation Loc, bool Explicit = false);
+  ///
+  /// \param FunctionScopeIndexToStopAt If non-null, it points to the index
+  /// of the FunctionScopeInfo stack beyond which we do not attempt to capture.
+  /// This is useful when enclosing lambdas must speculatively capture 
+  /// 'this' that may or may not be used in certain specializations of
+  /// a nested generic lambda (depending on whether the name resolves to 
+  /// a non-static member function or a static function).
+  /// \return returns 'true' if failed, 'false' if success.
+  bool CheckCXXThisCapture(SourceLocation Loc, bool Explicit = false, 
+      bool BuildAndDiagnose = true,
+      const unsigned *const FunctionScopeIndexToStopAt = 0);
 
   /// \brief Determine whether the given type is the type of *this that is used
   /// outside of the body of a member function for a type that is currently
@@ -4342,7 +4386,8 @@ public:
   }
   ExprResult ActOnFinishFullExpr(Expr *Expr, SourceLocation CC,
                                  bool DiscardedValue = false,
-                                 bool IsConstexpr = false);
+                                 bool IsConstexpr = false,
+                                 bool IsLambdaInitCaptureInitializer = false);
   StmtResult ActOnFinishFullStmt(Stmt *Stmt);
 
   // Marks SS invalid if it represents an incomplete type.
@@ -4517,7 +4562,8 @@ public:
   /// \brief Create a new lambda closure type.
   CXXRecordDecl *createLambdaClosureType(SourceRange IntroducerRange,
                                          TypeSourceInfo *Info,
-                                         bool KnownDependent);
+                                         bool KnownDependent, 
+                                         LambdaCaptureDefault CaptureDefault);
 
   /// \brief Start the definition of a lambda expression.
   CXXMethodDecl *startLambdaDefinition(CXXRecordDecl *Class,
@@ -4536,10 +4582,18 @@ public:
                         bool ExplicitResultType,
                         bool Mutable);
 
-  /// \brief Check an init-capture and build the implied variable declaration
-  /// with the specified name and initializer.
-  VarDecl *checkInitCapture(SourceLocation Loc, bool ByRef,
-                            IdentifierInfo *Id, Expr *Init);
+  /// \brief Perform initialization analysis of the init-capture and perform
+  /// any implicit conversions such as an lvalue-to-rvalue conversion if
+  /// not being used to initialize a reference.
+  QualType performLambdaInitCaptureInitialization(SourceLocation Loc, 
+      bool ByRef, IdentifierInfo *Id, Expr *&Init);
+  /// \brief Create a dummy variable within the declcontext of the lambda's
+  ///  call operator, for name lookup purposes for a lambda init capture.
+  ///  
+  ///  CodeGen handles emission of lambda captures, ignoring these dummy
+  ///  variables appropriately.
+  VarDecl *createLambdaInitCaptureVarDecl(SourceLocation Loc, 
+    QualType InitCaptureType, IdentifierInfo *Id, Expr *Init);
 
   /// \brief Build the implicit field for an init-capture.
   FieldDecl *buildInitCaptureField(sema::LambdaScopeInfo *LSI, VarDecl *Var);
@@ -4675,6 +4729,7 @@ public:
   //
   bool isCurrentClassName(const IdentifierInfo &II, Scope *S,
                           const CXXScopeSpec *SS = 0);
+  bool isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS);
 
   bool ActOnAccessSpecifier(AccessSpecifier Access,
                             SourceLocation ASLoc,
@@ -4857,7 +4912,7 @@ public:
   void CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD);
   void CheckExplicitlyDefaultedMemberExceptionSpec(CXXMethodDecl *MD,
                                                    const FunctionProtoType *T);
-  void CheckDelayedExplicitlyDefaultedMemberExceptionSpecs();
+  void CheckDelayedMemberExceptionSpecs();
 
   //===--------------------------------------------------------------------===//
   // C++ Derived Classes
@@ -5805,6 +5860,8 @@ public:
   // C++ Template Argument Deduction (C++ [temp.deduct])
   //===--------------------------------------------------------------------===//
 
+  QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType);
+
   /// \brief Describes the result of template argument deduction.
   ///
   /// The TemplateDeductionResult enumeration describes the result of
@@ -6434,6 +6491,26 @@ public:
   /// enclosing function, so that they can reference function-local
   /// types, static variables, enumerators, etc.
   std::deque<PendingImplicitInstantiation> PendingLocalImplicitInstantiations;
+
+  class SavePendingLocalImplicitInstantiationsRAII {
+  public:
+    SavePendingLocalImplicitInstantiationsRAII(Sema &S): S(S) {
+      SavedPendingLocalImplicitInstantiations.swap(
+          S.PendingLocalImplicitInstantiations);
+    }
+
+    ~SavePendingLocalImplicitInstantiationsRAII() {
+      assert(S.PendingLocalImplicitInstantiations.empty() &&
+             "there shouldn't be any pending local implicit instantiations");
+      SavedPendingLocalImplicitInstantiations.swap(
+          S.PendingLocalImplicitInstantiations);
+    }
+
+  private:
+    Sema &S;
+    std::deque<PendingImplicitInstantiation>
+    SavedPendingLocalImplicitInstantiations;
+  };
 
   void PerformPendingInstantiations(bool LocalOnly = false);
 

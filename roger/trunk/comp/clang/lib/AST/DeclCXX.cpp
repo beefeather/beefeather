@@ -71,7 +71,6 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
     ImplicitCopyAssignmentHasConstParam(true),
     HasDeclaredCopyConstructorWithConstParam(false),
     HasDeclaredCopyAssignmentWithConstParam(false),
-    FailedImplicitMoveConstructor(false), FailedImplicitMoveAssignment(false),
     IsLambda(false), NumBases(0), NumVBases(0), Bases(), VBases(),
     Definition(D), FirstFriend() {
 }
@@ -108,11 +107,15 @@ CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
 
 CXXRecordDecl *CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
                                            TypeSourceInfo *Info, SourceLocation Loc,
-                                           bool Dependent) {
+                                           bool Dependent, bool IsGeneric, 
+                                           LambdaCaptureDefault CaptureDefault) {
   CXXRecordDecl* R = new (C) CXXRecordDecl(CXXRecord, TTK_Class, DC, Loc, Loc,
                                            0, 0);
   R->IsBeingDefined = true;
-  R->DefinitionData = new (C) struct LambdaDefinitionData(R, Info, Dependent);
+  R->DefinitionData = new (C) struct LambdaDefinitionData(R, Info, 
+                                                          Dependent, 
+                                                          IsGeneric, 
+                                                          CaptureDefault);
   R->MayHaveOutOfDateDef = false;
   R->setImplicit(true);
   C.getTypeDeclType(R, /*PrevDecl=*/0);
@@ -722,6 +725,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (FieldRec->getDefinition()) {
         addedClassSubobject(FieldRec);
 
+        // We may need to perform overload resolution to determine whether a
+        // field can be moved if it's const or volatile qualified.
+        if (T.getCVRQualifiers() & (Qualifiers::Const | Qualifiers::Volatile)) {
+          data().NeedOverloadResolutionForMoveConstructor = true;
+          data().NeedOverloadResolutionForMoveAssignment = true;
+        }
+
         // C++11 [class.ctor]p5, C++11 [class.copy]p11:
         //   A defaulted [special member] for a class X is defined as
         //   deleted if:
@@ -944,10 +954,10 @@ bool CXXRecordDecl::isCLike() const {
 
   return isPOD() && data().HasOnlyCMembers;
 }
-
+ 
 bool CXXRecordDecl::isGenericLambda() const { 
-  return isLambda() && 
-      getLambdaCallOperator()->getDescribedFunctionTemplate(); 
+  if (!isLambda()) return false;
+  return getLambdaData().IsGenericLambda;
 }
 
 CXXMethodDecl* CXXRecordDecl::getLambdaCallOperator() const {
@@ -1198,7 +1208,7 @@ CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
                                              TemplateSpecializationKind TSK) {
   assert(TemplateOrInstantiation.isNull() && 
          "Previous template or instantiation?");
-  assert(!isa<ClassTemplateSpecializationDecl>(this));
+  assert(!isa<ClassTemplatePartialSpecializationDecl>(this));
   TemplateOrInstantiation 
     = new (getASTContext()) MemberSpecializationInfo(RD, TSK);
 }
@@ -1924,7 +1934,7 @@ NamespaceDecl::NamespaceDecl(DeclContext *DC, bool Inline,
     LocStart(StartLoc), RBraceLoc(), AnonOrFirstNamespaceAndInline(0, Inline),
     IsRogerNamespace(false)
 {
-  setPreviousDeclaration(PrevDecl);
+  setPreviousDecl(PrevDecl);
   
   if (PrevDecl)
     AnonOrFirstNamespaceAndInline.setPointer(PrevDecl->getOriginalNamespace());

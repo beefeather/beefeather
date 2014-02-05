@@ -55,7 +55,9 @@ enum AttributeDeclKind {
   ExpectedVariableFieldOrTag,
   ExpectedTypeOrNamespace,
   ExpectedObjectiveCInterface,
-  ExpectedMethodOrProperty
+  ExpectedMethodOrProperty,
+  ExpectedStructOrUnion,
+  ExpectedStructOrUnionOrClass
 };
 
 //===----------------------------------------------------------------------===//
@@ -207,11 +209,16 @@ static inline bool isCFStringType(QualType T, ASTContext &Ctx) {
   return RD->getIdentifier() == &Ctx.Idents.get("__CFString");
 }
 
+static unsigned getNumAttributeArgs(const AttributeList &Attr) {
+  // FIXME: Include the type in the argument list.
+  return Attr.getNumArgs() + Attr.hasParsedType();
+}
+
 /// \brief Check if the attribute has exactly as many args as Num. May
 /// output an error.
 static bool checkAttributeNumArgs(Sema &S, const AttributeList &Attr,
-                                  unsigned int Num) {
-  if (Attr.getNumArgs() != Num) {
+                                  unsigned Num) {
+  if (getNumAttributeArgs(Attr) != Num) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
       << Attr.getName() << Num;
     return false;
@@ -224,8 +231,8 @@ static bool checkAttributeNumArgs(Sema &S, const AttributeList &Attr,
 /// \brief Check if the attribute has at least as many args as Num. May
 /// output an error.
 static bool checkAttributeAtLeastNumArgs(Sema &S, const AttributeList &Attr,
-                                  unsigned int Num) {
-  if (Attr.getNumArgs() < Num) {
+                                         unsigned Num) {
+  if (getNumAttributeArgs(Attr) < Num) {
     S.Diag(Attr.getLoc(), diag::err_attribute_too_few_arguments) << Num;
     return false;
   }
@@ -1029,8 +1036,8 @@ static bool checkForConsumableClass(Sema &S, const CXXMethodDecl *MD,
 
 static void handleCallableWhenAttr(Sema &S, Decl *D,
                                    const AttributeList &Attr) {
-  
-  if (!checkAttributeAtLeastNumArgs(S, Attr, 1)) return;
+  if (!checkAttributeAtLeastNumArgs(S, Attr, 1))
+    return;
 
   if (!isa<CXXMethodDecl>(D)) {
     S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
@@ -1051,7 +1058,7 @@ static void handleCallableWhenAttr(Sema &S, Decl *D,
       return;
 
     if (!CallableWhenAttr::ConvertStrToConsumedState(StateString,
-                                                      CallableState)) {
+                                                     CallableState)) {
       S.Diag(Loc, diag::warn_attribute_type_not_supported)
         << Attr.getName() << StateString;
       return;
@@ -1066,8 +1073,62 @@ static void handleCallableWhenAttr(Sema &S, Decl *D,
 }
 
 
+static void handleParamTypestateAttr(Sema &S, Decl *D,
+                                    const AttributeList &Attr) {
+  if (!checkAttributeNumArgs(S, Attr, 1)) return;
+  
+  if (!isa<ParmVarDecl>(D)) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
+      Attr.getName() << ExpectedParameter;
+    return;
+  }
+  
+  ParamTypestateAttr::ConsumedState ParamState;
+  
+  if (Attr.isArgIdent(0)) {
+    IdentifierLoc *Ident = Attr.getArgAsIdent(0);
+    StringRef StateString = Ident->Ident->getName();
+
+    if (!ParamTypestateAttr::ConvertStrToConsumedState(StateString,
+                                                       ParamState)) {
+      S.Diag(Ident->Loc, diag::warn_attribute_type_not_supported)
+        << Attr.getName() << StateString;
+      return;
+    }
+  } else {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type) <<
+      Attr.getName() << AANT_ArgumentIdentifier;
+    return;
+  }
+  
+  // FIXME: This check is currently being done in the analysis.  It can be
+  //        enabled here only after the parser propagates attributes at
+  //        template specialization definition, not declaration.
+  //QualType ReturnType = cast<ParmVarDecl>(D)->getType();
+  //const CXXRecordDecl *RD = ReturnType->getAsCXXRecordDecl();
+  //
+  //if (!RD || !RD->hasAttr<ConsumableAttr>()) {
+  //    S.Diag(Attr.getLoc(), diag::warn_return_state_for_unconsumable_type) <<
+  //      ReturnType.getAsString();
+  //    return;
+  //}
+  
+  D->addAttr(::new (S.Context)
+             ParamTypestateAttr(Attr.getRange(), S.Context, ParamState,
+                                Attr.getAttributeSpellingListIndex()));
+}
+
+
 static void handleReturnTypestateAttr(Sema &S, Decl *D,
                                       const AttributeList &Attr) {
+  if (!checkAttributeNumArgs(S, Attr, 1)) return;
+  
+  if (!(isa<FunctionDecl>(D) || isa<ParmVarDecl>(D))) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
+      Attr.getName() << ExpectedFunctionMethodOrParameter;
+    return;
+  }
+
   ReturnTypestateAttr::ConsumedState ReturnState;
   
   if (Attr.isArgIdent(0)) {
@@ -1084,18 +1145,16 @@ static void handleReturnTypestateAttr(Sema &S, Decl *D,
     return;
   }
   
-  if (!isa<FunctionDecl>(D)) {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
-      Attr.getName() << ExpectedFunction;
-    return;
-  }
-  
   // FIXME: This check is currently being done in the analysis.  It can be
   //        enabled here only after the parser propagates attributes at
   //        template specialization definition, not declaration.
   //QualType ReturnType;
   //
-  //if (const CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
+  //if (const ParmVarDecl *Param = dyn_cast<ParmVarDecl>(D)) {
+  //  ReturnType = Param->getType();
+  //
+  //} else if (const CXXConstructorDecl *Constructor =
+  //             dyn_cast<CXXConstructorDecl>(D)) {
   //  ReturnType = Constructor->getThisType(S.getASTContext())->getPointeeType();
   //  
   //} else {
@@ -1118,7 +1177,8 @@ static void handleReturnTypestateAttr(Sema &S, Decl *D,
 
 
 static void handleSetTypestateAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (!checkAttributeNumArgs(S, Attr, 1)) return;
+  if (!checkAttributeNumArgs(S, Attr, 1))
+    return;
 
   if (!isa<CXXMethodDecl>(D)) {
     S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
@@ -1130,21 +1190,14 @@ static void handleSetTypestateAttr(Sema &S, Decl *D, const AttributeList &Attr) 
     return;
   
   SetTypestateAttr::ConsumedState NewState;
-  
   if (Attr.isArgIdent(0)) {
-    StringRef Param = Attr.getArgAsIdent(0)->Ident->getName();
-    
-    if (Param == "unknown") {
-      NewState = SetTypestateAttr::Unknown;
-    } else if (Param == "consumed") {
-      NewState = SetTypestateAttr::Consumed;
-    } else if (Param == "unconsumed") {
-      NewState = SetTypestateAttr::Unconsumed;
-    } else {
-      S.Diag(Attr.getLoc(), diag::warn_unknown_consumed_state) << Param;
+    IdentifierLoc *Ident = Attr.getArgAsIdent(0);
+    StringRef Param = Ident->Ident->getName();
+    if (!SetTypestateAttr::ConvertStrToConsumedState(Param, NewState)) {
+      S.Diag(Ident->Loc, diag::warn_attribute_type_not_supported)
+        << Attr.getName() << Param;
       return;
     }
-    
   } else {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type) <<
       Attr.getName() << AANT_ArgumentIdentifier;
@@ -1156,9 +1209,10 @@ static void handleSetTypestateAttr(Sema &S, Decl *D, const AttributeList &Attr) 
                               Attr.getAttributeSpellingListIndex()));
 }
 
-static void handleTestsTypestateAttr(Sema &S, Decl *D,
-                                        const AttributeList &Attr) {
-  if (!checkAttributeNumArgs(S, Attr, 1)) return;
+static void handleTestTypestateAttr(Sema &S, Decl *D,
+                                    const AttributeList &Attr) {
+  if (!checkAttributeNumArgs(S, Attr, 1))
+    return;
   
   if (!isa<CXXMethodDecl>(D)) {
     S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
@@ -1169,20 +1223,15 @@ static void handleTestsTypestateAttr(Sema &S, Decl *D,
   if (!checkForConsumableClass(S, cast<CXXMethodDecl>(D), Attr))
     return;
   
-  TestsTypestateAttr::ConsumedState TestState;
-  
+  TestTypestateAttr::ConsumedState TestState;  
   if (Attr.isArgIdent(0)) {
-    StringRef Param = Attr.getArgAsIdent(0)->Ident->getName();
-    
-    if (Param == "consumed") {
-      TestState = TestsTypestateAttr::Consumed;
-    } else if (Param == "unconsumed") {
-      TestState = TestsTypestateAttr::Unconsumed;
-    } else {
-      S.Diag(Attr.getLoc(), diag::warn_unknown_consumed_state) << Param;
+    IdentifierLoc *Ident = Attr.getArgAsIdent(0);
+    StringRef Param = Ident->Ident->getName();
+    if (!TestTypestateAttr::ConvertStrToConsumedState(Param, TestState)) {
+      S.Diag(Ident->Loc, diag::warn_attribute_type_not_supported)
+        << Attr.getName() << Param;
       return;
     }
-    
   } else {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type) <<
       Attr.getName() << AANT_ArgumentIdentifier;
@@ -1190,7 +1239,7 @@ static void handleTestsTypestateAttr(Sema &S, Decl *D,
   }
   
   D->addAttr(::new (S.Context)
-             TestsTypestateAttr(Attr.getRange(), S.Context, TestState,
+             TestTypestateAttr(Attr.getRange(), S.Context, TestState,
                                 Attr.getAttributeSpellingListIndex()));
 }
 
@@ -1297,33 +1346,37 @@ static void handleIBOutletCollection(Sema &S, Decl *D,
   if (!checkIBOutletCommon(S, D, Attr))
     return;
 
-  IdentifierLoc *IL = Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : 0;
-  IdentifierInfo *II;
-  SourceLocation ILS;
-  if (IL) {
-    II = IL->Ident;
-    ILS = IL->Loc;
-  } else {
-    II = &S.Context.Idents.get("NSObject");
+  ParsedType PT;
+
+  if (Attr.hasParsedType())
+    PT = Attr.getTypeArg();
+  else {
+    PT = S.getTypeName(S.Context.Idents.get("NSObject"), Attr.getLoc(),
+                       S.getScopeForContext(D->getDeclContext()->getParent()));
+    if (!PT) {
+      S.Diag(Attr.getLoc(), diag::err_iboutletcollection_type) << "NSObject";
+      return;
+    }
   }
-  
-  ParsedType TypeRep = S.getTypeName(*II, Attr.getLoc(), 
-                        S.getScopeForContext(D->getDeclContext()->getParent()));
-  if (!TypeRep) {
-    S.Diag(Attr.getLoc(), diag::err_iboutletcollection_type) << II;
-    return;
-  }
-  QualType QT = TypeRep.get();
+
+  TypeSourceInfo *QTLoc = 0;
+  QualType QT = S.GetTypeFromParser(PT, &QTLoc);
+  if (!QTLoc)
+    QTLoc = S.Context.getTrivialTypeSourceInfo(QT, Attr.getLoc());
+
   // Diagnose use of non-object type in iboutletcollection attribute.
   // FIXME. Gnu attribute extension ignores use of builtin types in
   // attributes. So, __attribute__((iboutletcollection(char))) will be
   // treated as __attribute__((iboutletcollection())).
   if (!QT->isObjCIdType() && !QT->isObjCObjectType()) {
-    S.Diag(Attr.getLoc(), diag::err_iboutletcollection_type) << II;
+    S.Diag(Attr.getLoc(),
+           QT->isBuiltinType() ? diag::err_iboutletcollection_builtintype
+                               : diag::err_iboutletcollection_type) << QT;
     return;
   }
+
   D->addAttr(::new (S.Context)
-             IBOutletCollectionAttr(Attr.getRange(), S.Context, QT, ILS,
+             IBOutletCollectionAttr(Attr.getRange(), S.Context, QTLoc,
                                     Attr.getAttributeSpellingListIndex()));
 }
 
@@ -2727,16 +2780,15 @@ static void handleWorkGroupSize(Sema &S, Decl *D,
 static void handleVecTypeHint(Sema &S, Decl *D, const AttributeList &Attr) {
   assert(Attr.getKind() == AttributeList::AT_VecTypeHint);
 
-  if (!checkAttributeNumArgs(S, Attr, 0))
-    return;
-
   if (!Attr.hasParsedType()) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
       << Attr.getName() << 1;
     return;
   }
 
-  QualType ParmType = S.GetTypeFromParser(Attr.getTypeArg());
+  TypeSourceInfo *ParmTSI = 0;
+  QualType ParmType = S.GetTypeFromParser(Attr.getTypeArg(), &ParmTSI);
+  assert(ParmTSI && "no type source info for attribute argument");
 
   if (!ParmType->isExtVectorType() && !ParmType->isFloatingType() &&
       (ParmType->isBooleanType() ||
@@ -2749,14 +2801,14 @@ static void handleVecTypeHint(Sema &S, Decl *D, const AttributeList &Attr) {
   if (Attr.getKind() == AttributeList::AT_VecTypeHint &&
       D->hasAttr<VecTypeHintAttr>()) {
     VecTypeHintAttr *A = D->getAttr<VecTypeHintAttr>();
-    if (A->getTypeHint() != ParmType) {
+    if (!S.Context.hasSameType(A->getTypeHint(), ParmType)) {
       S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute) << Attr.getName();
       return;
     }
   }
 
   D->addAttr(::new (S.Context) VecTypeHintAttr(Attr.getLoc(), S.Context,
-                                               ParmType, Attr.getLoc()));
+                                               ParmTSI));
 }
 
 SectionAttr *Sema::mergeSectionAttr(Decl *D, SourceRange Range,
@@ -2857,10 +2909,15 @@ static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   } else if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
     if (ULE->hasExplicitTemplateArgs())
       S.Diag(Loc, diag::warn_cleanup_ext);
-
-    // This will diagnose the case where the function cannot be found.
     FD = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
     NI = ULE->getNameInfo();
+    if (!FD) {
+      S.Diag(Loc, diag::err_attribute_cleanup_arg_not_function) << 2
+        << NI.getName();
+      if (ULE->getType() == S.Context.OverloadTy)
+        S.NoteAllOverloadCandidates(ULE);
+      return;
+    }
   } else {
     S.Diag(Loc, diag::err_attribute_cleanup_arg_not_function) << 0;
     return;
@@ -4050,11 +4107,13 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
     return;
 
   IdentifierInfo *PointerKind = Attr.getArgAsIdent(0)->Ident;
-  QualType MatchingCType = S.GetTypeFromParser(Attr.getMatchingCType(), NULL);
+  TypeSourceInfo *MatchingCTypeLoc = 0;
+  S.GetTypeFromParser(Attr.getMatchingCType(), &MatchingCTypeLoc);
+  assert(MatchingCTypeLoc && "no type source info for attribute argument");
 
   D->addAttr(::new (S.Context)
              TypeTagForDatatypeAttr(Attr.getRange(), S.Context, PointerKind,
-                                    MatchingCType,
+                                    MatchingCTypeLoc,
                                     Attr.getLayoutCompatible(),
                                     Attr.getMustBeNull(),
                                     Attr.getAttributeSpellingListIndex()));
@@ -4329,6 +4388,31 @@ static void handleNSBridgedAttr(Sema &S, Scope *Sc, Decl *D,
 
   D->addAttr(::new (S.Context)
              NSBridgedAttr(Attr.getRange(), S.Context, Parm ? Parm->Ident : 0,
+                           Attr.getAttributeSpellingListIndex()));
+}
+
+static void handleObjCBridgeAttr(Sema &S, Scope *Sc, Decl *D,
+                                const AttributeList &Attr) {
+  if (!isa<RecordDecl>(D)) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
+    << Attr.getName()
+    << (S.getLangOpts().CPlusPlus ? ExpectedStructOrUnionOrClass
+                                  : ExpectedStructOrUnion);
+    return;
+  }
+  
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(D->getLocStart(), diag::err_objc_bridge_not_id);
+    return;
+  }
+  IdentifierLoc *Parm = Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : 0;
+  if (!Parm) {
+    S.Diag(D->getLocStart(), diag::err_objc_bridge_not_id);
+    return;
+  }
+  
+  D->addAttr(::new (S.Context)
+             ObjCBridgeAttr(Attr.getRange(), S.Context, Parm ? Parm->Ident : 0,
                            Attr.getAttributeSpellingListIndex()));
 }
 
@@ -4618,6 +4702,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
       
   case AttributeList::AT_NSBridged:
     handleNSBridgedAttr(S, scope, D, Attr); break;
+      
+  case AttributeList::AT_ObjCBridge:
+    handleObjCBridgeAttr(S, scope, D, Attr); break;
 
   case AttributeList::AT_CFAuditedTransfer:
   case AttributeList::AT_CFUnknownTransfer:
@@ -4822,14 +4909,17 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_CallableWhen:
     handleCallableWhenAttr(S, D, Attr);
     break;
+  case AttributeList::AT_ParamTypestate:
+    handleParamTypestateAttr(S, D, Attr);
+    break;
   case AttributeList::AT_ReturnTypestate:
     handleReturnTypestateAttr(S, D, Attr);
     break;
   case AttributeList::AT_SetTypestate:
     handleSetTypestateAttr(S, D, Attr);
     break;
-  case AttributeList::AT_TestsTypestate:
-    handleTestsTypestateAttr(S, D, Attr);
+  case AttributeList::AT_TestTypestate:
+    handleTestTypestateAttr(S, D, Attr);
     break;
 
   // Type safety attributes.
