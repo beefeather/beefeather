@@ -1,0 +1,21 @@
+Command line:
+-cc1
+prolog.cpp
+-fcxx-exceptions
+
+-I/usr/include
+-I/usr/include/i386-linux-gnu
+-I/usr/lib/llvm-3.2/lib/clang/3.2/include/
+-I/usr/include/c++/4.8
+-I/usr/include/i386-linux-gnu/c++/4.8
+
+-Iv8/include
+-Icurlpp/curlpp-0.7.3/include
+
+
+
+V8:
+SVN http://v8.googlecode.com/svn/trunk/include  @7688
+
+CURLPP:
+download http://code.google.com/p/curlpp/downloads/detail?name=curlpp-0.7.3.tar.gz
