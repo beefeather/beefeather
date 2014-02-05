@@ -11,6 +11,7 @@ import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarationListOwner;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier;
+import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDefinition;
 import org.eclipse.cdt.core.dom.ast.IASTName;
@@ -19,7 +20,6 @@ import org.eclipse.cdt.core.dom.ast.IASTNodeLocation;
 import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConversionName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExplicitTemplateInstantiation;
@@ -51,6 +51,8 @@ import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.TokenRange;
 import ru.spb.rybin.clangroger.overviewparser.OverviewWriter.UsingRegion;
 
 class AstConverter {
+	private static final boolean SUPPORT_NAMESPACES = false;
+	
 	static File createOutputMode(IASTTranslationUnit unit, int textLength, Printer printer) {
 		final List<? extends Region> regions = dumpDeclarations(unit, printer);
 		return new DataFile() {
@@ -88,8 +90,13 @@ class AstConverter {
 				boolean other;
 				if (d instanceof ICPPASTNamespaceDefinition) {
 					ICPPASTNamespaceDefinition namespaceDefinition = (ICPPASTNamespaceDefinition) d;
-					NamespaceRegion namespaceRegion = dumpNamespace(namespaceDefinition, printer);
-					regions.add(namespaceRegion);
+					if (SUPPORT_NAMESPACES) {
+						NamespaceRegion namespaceRegion = dumpNamespace(namespaceDefinition, printer);
+						regions.add(namespaceRegion);
+					} else {
+						ErrorRegion region = createErrorRegion(namespaceDefinition, "namespace block", printer);
+						regions.add(region);
+					}
 					other = false;
 				} else if (d instanceof ICPPASTVisibilityLabel) {
 					ICPPASTVisibilityLabel visibilityLabel = (ICPPASTVisibilityLabel) d;
@@ -97,8 +104,12 @@ class AstConverter {
 					other = false;
 				} else if (d instanceof IASTFunctionDefinition) {
 					IASTFunctionDefinition functionDef = (IASTFunctionDefinition) d;
-					FunctionRegion region = dumpFunctionDefinition(functionDef, functionDef, currentVisibility, false, false, printer);
-					regions.add(region);
+					if (functionDef.getDeclarator().getName() instanceof ICPPASTQualifiedName) {
+						regions.add(dumpDefinitionRegion(functionDef, printer));
+					} else {
+						FunctionRegion region = dumpFunctionDefinition(functionDef, functionDef, currentVisibility, false, false, printer);
+						regions.add(region);
+					}
 					other = false;
 				} else if (d instanceof ICPPASTUsingDeclaration) {
 					ICPPASTUsingDeclaration usingDecl = (ICPPASTUsingDeclaration) d;
@@ -144,6 +155,10 @@ class AstConverter {
 		return regions;
 	}
 	
+	private static ErrorRegion dumpDefinitionRegion(IASTDeclaration decl, Printer printer) {
+		return createErrorRegion(decl, "definitions are not supported", printer);
+	}
+	
 	private static FunctionRegion dumpFunctionDefinition(final IASTFunctionDefinition functionDef, final IASTDeclaration fullDecl, final Integer currentVisibility,
 			boolean isTemplate, final boolean isTemplateSpecialization, Printer printer) {
 		IASTFunctionDeclarator declarator = functionDef.getDeclarator();
@@ -180,8 +195,8 @@ class AstConverter {
 	}
 	
 	private static DeclarationName createName(final IASTName name, IASTFunctionDefinition functionDef) {
-		DeclarationName declarationName; 
-		if (name instanceof ICPPASTOperatorName) {
+		DeclarationName declarationName;
+        if (name instanceof ICPPASTOperatorName) {
 			final ICPPASTOperatorName operatorName = (ICPPASTOperatorName) name;
 			final boolean isArray = operatorName.getNodeLocations()[0].getNodeLength() == 4 && operatorName.getRawToken(2).getType() == IToken.tLBRACE;
 			declarationName = new DeclarationName.Operator() {
@@ -361,7 +376,7 @@ class AstConverter {
 			IASTDeclarator[] decls = simpleDeclaration.getDeclarators();
 			List<Region> regionList = new ArrayList<Region>(decls.length);
 			if (decls.length != 1) {
-				return createErrorRegion(d, "Multiple declarators (" + decls.length + ")", printer);
+				return createErrorRegions(d, "Multiple declarators (" + decls.length + ")", printer);
 			}
 			final IASTDeclarator dd = decls[0];
 			printer.println("<declaration name=" + dd.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(dd.getName()) + ", declaration=" + getLocationString(d) + " declarator=" + getLocationString(dd) + ">");
@@ -396,7 +411,7 @@ class AstConverter {
 				IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) internalDeclaration;
 				IASTDeclSpecifier sp = simpleDeclaration.getDeclSpecifier();
 				if (simpleDeclaration.getDeclarators().length != 0) {
-					return createErrorRegion(internalDeclaration, "Unexpected declarators", printer);
+					return createErrorRegions(internalDeclaration, "Unexpected declarators", printer);
 				}
 				ICPPASTCompositeTypeSpecifier composite = (ICPPASTCompositeTypeSpecifier) sp;
 				printer.println("<templateClass name=" + composite.getName().getRawSignature() + " visibility=" + currentVisibility + " nameLoc=" + getLocationString(composite.getName()) + " declaration=" + getLocationString(d) + " classLoc=" + getLocationString(composite) + " isSpecialization=" + isSpecialization);
@@ -404,7 +419,7 @@ class AstConverter {
 				printer.println(">");
 				return Collections.singletonList(classRegion);
 			} else {
-				return createErrorRegion(d, "Unrecognized template", printer);
+				return createErrorRegions(d, "Unrecognized template", printer);
 			}
 		} else if (d instanceof ICPPASTExplicitTemplateInstantiation) {
 			printer.println("<templateInstantiation visibility=" + currentVisibility + " declaration=" + getLocationString(d) + ">");
@@ -430,10 +445,14 @@ class AstConverter {
 		return null;
 	}
 	
-	private static Collection<? extends ErrorRegion> createErrorRegion(IASTNode node, String message, Printer printer) {
+	private static ErrorRegion createErrorRegion(IASTNode node, String message, Printer printer) {
 		ErrorRegion region = new ErrorRegion.Impl(message, createRange(node));
 		printer.println("<errorRegion range=" + getLocationString(node) + " message='" + message + "'>");
-		return Collections.singletonList(region);
+		return region;
+	}
+	
+	private static Collection<? extends ErrorRegion> createErrorRegions(IASTNode node, String message, Printer printer) {
+		return Collections.singletonList(createErrorRegion(node, message, printer));
 	}
 	
 	private static NonTypeRegion dumpOther(final Integer visibility, final int begin, final int end, Printer printer) {
