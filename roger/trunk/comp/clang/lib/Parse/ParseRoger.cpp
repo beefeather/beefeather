@@ -47,12 +47,14 @@ struct RogerRange {
 
 
 struct RogerFile {
+  CachedTokens &Toks;
   DeclContext *nsContext;
   RogerRange range;
+  SourceLocation startLoc;
   RogerNamespaceDeclList inner;
   NamespaceDecl *FileScopeNs;
   std::string FileName;
-  RogerFile() : FileScopeNs(0) {}
+  RogerFile(CachedTokens &Toks) : Toks(Toks), FileScopeNs(0) {}
 };
 
 
@@ -629,7 +631,7 @@ typedef std::vector<RogerFile*> RogerFileVector;
 
 template<typename T, int S>
 static void TossRogerDeclsToFiles(RogerNamespaceDeclList *input, RogerFileVector &output,
-    SmallVector<T*, S> RogerNamespaceDeclList::* list_field, RogerRange T::* rangeField) {
+    SmallVector<T*, S> RogerNamespaceDeclList::* list_field, RogerRange T::* rangeField, CachedTokens &Toks, Parser *P) {
   SmallVector<T*, S> &inputPart = input->*list_field;
   RogerFileVector::iterator outputIt = output.begin();
   for (size_t i = 0; i < inputPart.size(); ++i) {
@@ -637,6 +639,9 @@ static void TossRogerDeclsToFiles(RogerNamespaceDeclList *input, RogerFileVector
     while ((item->*rangeField).begin >= (*outputIt)->range.end) {
       ++outputIt;
       assert(outputIt != output.end());
+    }
+    if ((item->*rangeField).begin < (*outputIt)->range.begin || (item->*rangeField).end > (*outputIt)->range.end) {
+      P->Diag(Toks[(item->*rangeField).begin], diag::err_roger_declaration_accross_files);
     }
     ((*outputIt)->inner.*list_field).push_back(item);
   }
@@ -674,7 +679,11 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   // Rest of source.
   while (true) {
-    RogerFile* file = new RogerFile;
+    RogerFile* file = new RogerFile(Toks);
+
+    if (Tok.isNot(tok::eof)) {
+      file->startLoc = Tok.getLocation();
+    }
 
     const char *nofilePath = 0;
     DeclContext *nsContext = ParseRogerNamespaceHeader(nofilePath);
@@ -723,12 +732,15 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
       FileID FileID = PP.getSourceManager().createFileID(SourceFile, capybaraLoc, SrcMgr::C_User);
       PP.EnterSourceFile(FileID, 0, capybaraLoc);
 
-      RogerFile* file = new RogerFile;
+      RogerFile* file = new RogerFile(Toks);
 
       ConsumeToken();
 
       const char *filePathPos = relativePath.data();
       SourceLocation FileStartLocation = Tok.getLocation();
+      if (Tok.isNot(tok::eof)) {
+        file->startLoc = Tok.getLocation();
+      }
       DeclContext *nsContext = ParseRogerNamespaceHeader(filePathPos);
 
       if (filePathPos == 0 || !llvm::sys::path::is_separator(*filePathPos)) {
@@ -759,12 +771,12 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   RogerParsingNamespace *topParsingNs = new RogerParsingNamespace;
 
-  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::NameDeclaration, &RogerDeclaration::range);
-  TossRogerDeclsToFiles<RogerClassDecl, 4>(definitionPart, files, &RogerNamespaceDeclList::ClassDecl, &RogerClassDecl::declaration);
-  TossRogerDeclsToFiles<RogerEnumDecl, 0>(definitionPart, files, &RogerNamespaceDeclList::EnumDecl, &RogerEnumDecl::range);
-  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::NonType, &RogerNonType::range);
-  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::Using, &RogerDeclaration::range);
-  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::UsingDir, &RogerNonType::range);
+  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::NameDeclaration, &RogerDeclaration::range, Toks, this);
+  TossRogerDeclsToFiles<RogerClassDecl, 4>(definitionPart, files, &RogerNamespaceDeclList::ClassDecl, &RogerClassDecl::declaration, Toks, this);
+  TossRogerDeclsToFiles<RogerEnumDecl, 0>(definitionPart, files, &RogerNamespaceDeclList::EnumDecl, &RogerEnumDecl::range, Toks, this);
+  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::NonType, &RogerNonType::range, Toks, this);
+  TossRogerDeclsToFiles<RogerDeclaration, 4>(definitionPart, files, &RogerNamespaceDeclList::Using, &RogerDeclaration::range, Toks, this);
+  TossRogerDeclsToFiles<RogerNonType, 4>(definitionPart, files, &RogerNamespaceDeclList::UsingDir, &RogerNonType::range, Toks, this);
   assert(definitionPart->Namespace.empty());
   //TossRogerDeclsToFiles<RogerNamespace>(definitionPart, files, &RogerNamespaceDeclList::Namespace, &RogerNamespace::range);
 
@@ -945,12 +957,14 @@ void Parser::FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclLis
     } else if (!rogerNsDeclList->EnumDecl.empty()) {
       RogerEnumDecl* decl = rogerNsDeclList->EnumDecl[0];
       problemLoc = decl->Toks[decl->range.begin].getLocation();
-    } else if (rogerNsDeclList->ClassDecl.size() > 1) {
+    } else if (rogerNsDeclList->ClassDecl.size() == 0) {
+      problemLoc = file->startLoc;
+    } else if (rogerNsDeclList->ClassDecl.size() >= 1) {
       RogerClassDecl *singleClass = rogerNsDeclList->ClassDecl[0];
       IdentifierInfo *singleClassII = singleClass->Toks[singleClass->nameToken].getIdentifierInfo();
       if (expectedClassName != singleClassII->getNameStart()) {
         problemLoc = singleClass->Toks[singleClass->nameToken].getLocation();
-      } else {
+      } else if (rogerNsDeclList->ClassDecl.size() > 1) {
         RogerClassDecl* decl = rogerNsDeclList->ClassDecl[1];
         problemLoc = decl->Toks[decl->nameToken].getLocation();
       }

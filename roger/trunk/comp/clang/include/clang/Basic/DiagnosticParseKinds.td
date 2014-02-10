@@ -870,9 +870,11 @@ def err_roger_invalid_non_type_region : Error<
 def err_roger_invalid_region : Error<
   "unrecognized part <%0> (Roger overview parser)">;
 def err_roger_unexpected_in_class_file : Error<
-  "only a class name <%0> is expected at roger class source file">;
+  "file name rule allows only a class named '%0' to be here (put '-' in file name to dismiss it)">;
 def err_roger_namespace_doesnt_match_path : Error<
   "roger namespace declaration doesn't match file path">;
+def err_roger_declaration_accross_files : Error<
+  "declaration got spanned accross 2 files">;
 
 
 } // end of Parser diagnostics
