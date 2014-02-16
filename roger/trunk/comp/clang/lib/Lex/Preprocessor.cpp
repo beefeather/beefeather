@@ -69,7 +69,7 @@ Preprocessor::Preprocessor(IntrusiveRefCntPtr<PreprocessorOptions> PPOpts,
       CodeCompletionReached(0), SkipMainFilePreamble(0, true), CurPPLexer(0),
       CurDirLookup(0), CurLexerKind(CLK_Lexer), Callbacks(0),
       MacroArgCache(0), Record(0), MIChainHead(0), MICache(0),
-      DeserialMIChainHead(0) {
+      DeserialMIChainHead(0), RogerDisableDirectives(false) {
   OwnsHeaderSearch = OwnsHeaders;
   
   ScratchBuf = new ScratchBuffer(SourceMgr);

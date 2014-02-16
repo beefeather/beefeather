@@ -659,6 +659,8 @@ void Parser::ParseRogerPartOpt(ASTConsumer *Consumer) {
 
   SourceLocation capybaraLoc = Tok.getLocation();
 
+  PP.RogerDisableDirectives = true;
+
   //ConsumeToken();
 
   // Do we need it?

@@ -1133,6 +1133,8 @@ private:
 
 public:
 
+  bool RogerDisableDirectives;
+
   // SetPoisonReason - Call this function to indicate the reason for
   // poisoning an identifier. If that identifier is accessed while
   // poisoned, then this reason will be used instead of the default

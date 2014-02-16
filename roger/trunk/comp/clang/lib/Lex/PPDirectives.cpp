@@ -706,6 +706,12 @@ private:
 /// lexer/preprocessor state, and advances the lexer(s) so that the next token
 /// read is the correct one.
 void Preprocessor::HandleDirective(Token &Result) {
+  if (RogerDisableDirectives) {
+    Diag(Result, diag::roger_directives_disabled);
+    //DiscardUntilEndOfDirective();
+    return;
+  }
+
   // FIXME: Traditional: # with whitespace before it not recognized by K&R?
 
   // We just parsed a # character at the start of a line, so we're in directive

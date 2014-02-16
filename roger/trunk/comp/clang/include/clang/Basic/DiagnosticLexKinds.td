@@ -261,6 +261,10 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
   "whitespace required after macro name">;
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
+
+def roger_directives_disabled : Error<
+  "Preprocessor directives in Roger mode are not supported yet (only local #defines are going to be)">;
+
   
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">;
 def pp_pragma_sysheader_in_main_file : Warning<
