@@ -58,17 +58,21 @@ struct RogerFile {
 };
 
 
-struct RogerNonType {
-  RogerNonType(CachedTokens &T) : Toks(T) {}
-  CachedTokens &Toks;
-  int visibility;
-  RogerRange range;
-};
-
 struct RogerBlindParsable {
   virtual Token &rangeBegin() = 0;
   virtual int rangeSize() = 0;
   virtual int getVisibility() = 0;
+};
+
+struct RogerNonType : RogerBlindParsable{
+  RogerNonType(CachedTokens &T) : Toks(T) {}
+  CachedTokens &Toks;
+  int visibility;
+  RogerRange range;
+
+  Token &rangeBegin() { return Toks[range.begin]; }
+  int rangeSize() { return range.size(); }
+  int getVisibility() { return visibility; }
 };
 
 struct RogerDeclaration : RogerBlindParsable {
@@ -934,6 +938,25 @@ private:
   }
 };
 
+
+class RogerGuardableCallback : public RogerItemizedLateParseCallback {
+  RogerCallbackGuard guard;
+  bool isInUse;
+public:
+  bool isBusy() {
+    return isInUse;
+  }
+  void parseDeferred() {
+    RogerCallbackInUseScope inUse(&isInUse);
+    guard.check();
+    parseDeferredImpl();
+  }
+protected:
+  RogerGuardableCallback() : isInUse(false) {}
+  virtual void parseDeferredImpl() = 0;
+};
+
+
 static std::string getExpectedClassName(std::string fileName) {
   const StringRef shortName = llvm::sys::path::stem(fileName);
   if (shortName.find('-') != StringRef::npos) {
@@ -992,20 +1015,11 @@ void Parser::FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclLis
   };
   FillRogerDeclContextWithNames<TypesForRec>(rogerNsDeclList, DC, parsingNs, topLevelDecs, file);
 
-  struct CompleteParsingCb : RogerItemizedLateParseCallback {
+  struct CompleteParsingCb : RogerGuardableCallback {
     Parser *P;
     RogerParsingNamespace *parsingNs;
     DeclContext *DC;
-    RogerCallbackGuard guard;
-    bool isInUse;
-    CompleteParsingCb() : isInUse(false) {}
-    bool isBusy() {
-      return isInUse;
-    }
-    void parseDeferred() {
-      RogerCallbackInUseScope inUse(&isInUse);
-      guard.check();
-
+    void parseDeferredImpl() {
       //P->RogerCompleteNamespaceParsing(DC, parsingNs);
     }
   };
@@ -1067,21 +1081,12 @@ void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl
     }
   }
 
-  struct CompleteParsingCb : RogerItemizedLateParseCallback {
+  struct CompleteParsingCb : RogerGuardableCallback {
     Parser *P;
     RecordDecl *RD;
     ParsingClass *parsingClass;
     RogerFile *file;
-    RogerCallbackGuard guard;
-    bool isInUse;
-    CompleteParsingCb() : isInUse(false) {}
-    bool isBusy() {
-      return isInUse;
-    }
-    void parseDeferred() {
-      RogerCallbackInUseScope inUse(&isInUse);
-      guard.check();
-
+    void parseDeferredImpl() {
       P->RogerCompleteCXXMemberSpecificationParsing(RD, file, parsingClass);
     }
   };
@@ -1096,6 +1101,27 @@ void Parser::FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl
   // Handle using.
 }
 
+template<typename CB_TYPES>
+class RogerParseCallback : public RogerGuardableCallback {
+  Parser* parser;
+  typename CB_TYPES::ROGER_DECL* decl;
+  typename CB_TYPES::DECL_CONTEXT *DC;
+  RogerTopLevelDecls *topLevelDecs;
+  RogerFile *file;
+  typename CB_TYPES::ParsingState *parsingObj;
+public:
+  RogerParseCallback(Parser *parser, typename CB_TYPES::ROGER_DECL *decl,
+      typename CB_TYPES::DECL_CONTEXT *DC, RogerTopLevelDecls *topLevelDecs, RogerFile *file, typename CB_TYPES::ParsingState *parsingObj)
+      : parser(parser), decl(decl), DC(DC), topLevelDecs(topLevelDecs), file(file), parsingObj(parsingObj) {}
+  void parseDeferredImpl() {
+    Parser::DeclGroupPtrTy result = (parser->*(CB_TYPES::ParseMethod::v))(decl, DC, file, parsingObj);
+    if (topLevelDecs && result) {
+      topLevelDecs->List.push_back(result);
+    }
+  }
+};
+
+
 template<typename Types>
 void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs, RogerFile *file) {
 
@@ -1105,78 +1131,45 @@ void Parser::FillRogerDeclContextWithNames(typename Types::DeclList *rogerDeclLi
     RogerClassDecl* decl = rogerDeclList->ClassDecl[i];
     Token &nameToken = decl->Toks[decl->nameToken];
 
-    struct CallbackImpl : public RogerItemizedLateParseCallback {
-      Parser* parser;
-      RogerClassDecl* decl;
-      DeclContext *DC;
-      RogerTopLevelDecls *topLevelDecs;
-      RogerFile *file;
-      RogerCallbackGuard guard;
-      bool isInUse;
-      CallbackImpl() : isInUse(false) {}
-      bool isBusy() {
-        return isInUse;
-      }
-      void parseDeferred() {
-        RogerCallbackInUseScope inUse(&isInUse);
-        guard.check();
-        Parser::DeclGroupPtrTy result = parser->ParseRogerTemplatableClassDecl(decl, file, DC);
-        if (topLevelDecs && result) {
-          topLevelDecs->List.push_back(result);
-        }
-      }
+    struct CbTypesForClass {
+      typedef DeclContext DECL_CONTEXT;
+      typedef RogerClassDecl ROGER_DECL;
+      typedef void ParsingState;
+      typedef RogerLiteral<Parser::DeclGroupPtrTy (Parser::*)(RogerClassDecl *, DeclContext *, RogerFile *, void *), &Parser::ParseRogerTemplatableClassDecl> ParseMethod;
     };
 
-    CallbackImpl *cb = new CallbackImpl();
-    cb->parser = this;
-    cb->decl = decl;
-    cb->DC = DC;
-    cb->topLevelDecs = topLevelDecs;
-    cb->file = file;
+    RogerItemizedLateParseCallback *cb = new RogerParseCallback<CbTypesForClass>(this, decl, DC, topLevelDecs, file, 0);
     Actions.ActOnNamedDeclarationRoger(DC, nameToken.getIdentifierInfo(), decl->isTemplateSecondary, cb);
   }
   for (size_t i = 0; i < rogerDeclList->NonType.size(); ++i) {
     RogerNonType *nonType = rogerDeclList->NonType[i];
-    Token &T = nonType->Toks[nonType->range.begin];
-    Diag(T, diag::err_roger_invalid_non_type_region)
-      << getTokenSimpleSpelling(T.getKind());
+//    Token &T = nonType->Toks[nonType->range.begin];
+//    Diag(T, diag::err_roger_invalid_non_type_region)
+//      << getTokenSimpleSpelling(T.getKind());
+
+    struct CbTypesForNonType {
+      typedef RogerNonType ROGER_DECL;
+      typedef typename Types::DeclContext DECL_CONTEXT;
+      typedef typename Types::ParsingState ParsingState;
+      typedef typename Types::ParseNamedDeclaration ParseMethod;
+    };
+
+    RogerItemizedLateParseCallback *cb = new RogerParseCallback<CbTypesForNonType>(this, nonType, DC, topLevelDecs, file, parsingObj);
+
+    Actions.ActOnNamedDeclarationRoger(DC, DeclarationName(), false, cb);
   }
 
   for (size_t i = 0; i < rogerDeclList->EnumDecl.size(); ++i) {
     RogerEnumDecl *enumDecl = rogerDeclList->EnumDecl[i];
 
-    struct CallbackImpl : public RogerItemizedLateParseCallback {
-      Parser* parser;
-      RogerEnumDecl *enumDecl;
-      typename Types::DeclContext *DC;
-      RogerTopLevelDecls *topLevelDecs;
-      RogerFile *file;
-      RogerCallbackGuard guard;
-      bool isInUse;
-      typename Types::ParsingState *parsingObj;
-      CallbackImpl() : isInUse(false) {}
-      bool isBusy() {
-        return isInUse;
-      }
-      void parseDeferred() {
-        RogerCallbackInUseScope inUse(&isInUse);
-        guard.check();
-
-        DeclGroupPtrTy Result = (parser->*(Types::ParseNamedDeclaration::v))(enumDecl, DC, file, parsingObj);
-        if (topLevelDecs && Result) {
-          topLevelDecs->List.push_back(Result);
-        }
-      }
+    struct CbTypesForEnum {
+      typedef RogerEnumDecl ROGER_DECL;
+      typedef typename Types::DeclContext DECL_CONTEXT;
+      typedef typename Types::ParsingState ParsingState;
+      typedef typename Types::ParseNamedDeclaration ParseMethod;
     };
 
-    CallbackImpl *cb = new CallbackImpl();
-    cb->parser = this;
-    cb->enumDecl = enumDecl;
-    cb->DC = DC;
-    cb->parsingObj = parsingObj;
-    cb->topLevelDecs = topLevelDecs;
-    cb->file = file;
-
+    RogerItemizedLateParseCallback *cb = new RogerParseCallback<CbTypesForEnum>(this, enumDecl, DC, topLevelDecs, file, parsingObj);
 
     SmallVector<DeclarationName, 10> names;
     names.push_back(DeclarationName(enumDecl->Toks[enumDecl->nameToken].getIdentifierInfo()));
@@ -1200,36 +1193,15 @@ void Parser::FillRogerDeclContextWithNamedDecls(SmallVector<RogerDeclaration*, 4
   for (size_t i = 0; i < NameDeclarationList.size(); ++i) {
     RogerDeclaration* decl = NameDeclarationList[i];
 
-    struct CallbackImpl : public RogerItemizedLateParseCallback {
-      Parser* parser;
-      RogerDeclaration* decl;
-      typename Types::DeclContext *DC;
-      RogerTopLevelDecls *topLevelDecs;
-      RogerFile *file;
-      RogerCallbackGuard guard;
-      bool isInUse;
-      typename Types::ParsingState *parsingObj;
-      CallbackImpl() : isInUse(false) {}
-      bool isBusy() {
-        return isInUse;
-      }
-      void parseDeferred() {
-        RogerCallbackInUseScope inUse(&isInUse);
-        guard.check();
-        DeclGroupPtrTy Result = (parser->*(Types::ParseNamedDeclaration::v))(decl, DC, file, parsingObj);
-        if (topLevelDecs && Result) {
-          topLevelDecs->List.push_back(Result);
-        }
-      }
+    struct CbTypesForNamed {
+      typedef RogerDeclaration ROGER_DECL;
+      typedef typename Types::DeclContext DECL_CONTEXT;
+      typedef typename Types::ParsingState ParsingState;
+      typedef typename Types::ParseNamedDeclaration ParseMethod;
     };
 
-    CallbackImpl *cb = new CallbackImpl();
-    cb->parser = this;
-    cb->decl = decl;
-    cb->DC = DC;
-    cb->parsingObj = parsingObj;
-    cb->topLevelDecs = topLevelDecs;
-    cb->file = file;
+    RogerItemizedLateParseCallback *cb = new RogerParseCallback<CbTypesForNamed>(this, decl, DC, topLevelDecs, file, parsingObj);
+
     bool isArray = false;
     switch (decl->nameKind) {
     case RogerDeclaration::NAME_PLAIN: {
@@ -1353,27 +1325,20 @@ Parser::DeclGroupPtrTy Parser::ParseRogerMemberRegion(RogerBlindParsable *decl, 
   return DeclGroupPtrTy();
 }
 
-class RogerRecordPreparser : public RogerItemizedLateParseCallback {
+class RogerRecordPreparser : public RogerGuardableCallback {
   Parser& parser;
   CXXRecordDecl *recDecl;
   RogerClassDecl *classDecl;
   RogerFile *file;
   int offset;
-  RogerCallbackGuard guard;
-  bool isInUse;
 public:
-  RogerRecordPreparser(Parser& p, CXXRecordDecl *rd, RogerClassDecl *cd, RogerFile *file, int offset) : parser(p), recDecl(rd), classDecl(cd), file(file), offset(offset), isInUse(false) {}
-  bool isBusy() {
-    return isInUse;
-  }
-  void parseDeferred() {
-    RogerCallbackInUseScope inUse(&isInUse);
-    guard.check();
+  RogerRecordPreparser(Parser& p, CXXRecordDecl *rd, RogerClassDecl *cd, RogerFile *file, int offset) : parser(p), recDecl(rd), classDecl(cd), file(file), offset(offset) {}
+  void parseDeferredImpl() {
     parser.PreparseRogerClassBody(recDecl, classDecl, file, offset);
   }
 };
 
-Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, RogerFile *file, DeclContext *DC) {
+Parser::DeclGroupPtrTy Parser::ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC, RogerFile *file, void *parsingState) {
   RogerNestedTokensState parseNestedTokens(this, &classDecl->Toks[classDecl->declaration.begin], classDecl->declaration.size());
   RogerParseScope scope(this, file, DC);
 
@@ -1766,21 +1731,13 @@ void Parser::PreparseRogerClassBody(CXXRecordDecl *recDecl, RogerClassDecl *clas
 
   parseNestedTokens.skipRest();
 
-  struct FillNamesCallBack : RogerItemizedLateParseCallback {
+  struct FillNamesCallBack : RogerGuardableCallback {
     Parser *P;
     CXXRecordDecl *recDecl;
     RogerClassDecl *classDecl;
     ParsingClass *parsingClass;
     RogerFile *file;
-    RogerCallbackGuard guard;
-    bool isInUse;
-    FillNamesCallBack() : isInUse(false) {}
-    bool isBusy() {
-      return isInUse;
-    }
-    void parseDeferred() {
-      RogerCallbackInUseScope inUse(&isInUse);
-      guard.check();
+    void parseDeferredImpl() {
       P->FillRogerRecordWithNames(classDecl, recDecl, file, parsingClass);
     }
   };
@@ -1849,7 +1806,7 @@ NamespaceDecl *Parser::GetOrParseRogerFileScope(RogerFile *file) {
   return NsD;
 }
 
-struct Parser::LateParsedStaticVarInitializer::Callback : RogerItemizedLateParseCallback {
+struct Parser::LateParsedStaticVarInitializer::Callback : RogerGuardableCallback {
   CachedTokens Toks;
 
   /// CachedTokens - The sequence of tokens that comprises the initializer,
@@ -1857,17 +1814,7 @@ struct Parser::LateParsedStaticVarInitializer::Callback : RogerItemizedLateParse
   Decl *Field;
   Parser *Self;
   RogerFile *file;
-
-  RogerCallbackGuard guard;
-  bool isInUse;
-  Callback() : isInUse(false) {}
-  bool isBusy() {
-    return isInUse;
-  }
-  void parseDeferred() {
-    RogerCallbackInUseScope inUse(&isInUse);
-    guard.check();
-
+  void parseDeferredImpl() {
     Self->ParseLexedRogerStaticVarInitializer(this);
   }
 };
@@ -1967,22 +1914,13 @@ Parser::LateParsedDeclaration *Parser::CreateOnDemandLateParsedDeclaration(LateP
   else
     FD = cast<FunctionDecl>(ND);
 
-  struct CB : RogerItemizedLateParseCallback {
+  struct CB : RogerGuardableCallback {
     Parser *P;
     DeclContext *DC;
     LateParsedDeclaration *LM;
     FunctionDecl *FD;
     RogerFile *file;
-    RogerCallbackGuard guard;
-    bool isInUse;
-    CB() : isInUse(false) {}
-    bool isBusy() {
-      return isInUse;
-    }
-    void parseDeferred() {
-      RogerCallbackInUseScope inUse(&isInUse);
-      guard.check();
-
+    void parseDeferredImpl() {
       DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(P->TemplateIds, P->TemplateIdsBeingCovered);
       ParenBraceBracketBalancer BalancerRAIIObj(*P);
 

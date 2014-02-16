@@ -1092,7 +1092,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
         Actions.MarkAsLateParsedTemplate(FnD, DP, Toks);
       } else {
         LexedMethod* LM = new LexedMethod(this, DP);
-        rogerParsingQueue->addAndWrap(LM, DP->getDeclContext(), rogerParsingFile);
+        rogerParsingQueue->addAndWrap(LM, DP->getLexicalDeclContext(), rogerParsingFile);
         LM->TemplateScope = TemplateInfo.Kind == ParsedTemplateInfo::Template;
         LM->Toks.swap(Toks);
       }

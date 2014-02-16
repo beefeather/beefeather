@@ -2385,7 +2385,7 @@ private:
   template<typename Types>
   void FillRogerDeclContextWithNamedDecls(SmallVector<RogerDeclaration*, 4> &NameDeclarationList, typename Types::DeclContext *DC, typename Types::ParsingState *parsingObj, RogerTopLevelDecls *topLevelDecs, RogerFile *file);
   void ParseRogerNonTypeRegion(RogerNonType *nonType, int defaultVisibility, DeclContext *DC);
-  DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, RogerFile *file, DeclContext *DC);
+  DeclGroupPtrTy ParseRogerTemplatableClassDecl(RogerClassDecl *classDecl, DeclContext *DC, RogerFile *file, void *parsingState);
   Decl *ParseRogerClassForwardDecl(RogerClassDecl *classDecl, RogerFile *file,
       const ParsedTemplateInfo &TemplateInfo,
       AccessSpecifier AS, RogerNestedTokensState &parseState, bool &typeSpecError);
