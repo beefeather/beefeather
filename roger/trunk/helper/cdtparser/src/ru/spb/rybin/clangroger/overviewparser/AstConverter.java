@@ -105,7 +105,7 @@ class AstConverter {
 				} else if (d instanceof IASTFunctionDefinition) {
 					IASTFunctionDefinition functionDef = (IASTFunctionDefinition) d;
 					if (functionDef.getDeclarator().getName() instanceof ICPPASTQualifiedName) {
-						regions.add(dumpDefinitionRegion(functionDef, printer));
+						regions.add(dumpDefinitionRegion(currentVisibility, functionDef, printer));
 					} else {
 						FunctionRegion region = dumpFunctionDefinition(functionDef, functionDef, currentVisibility, false, false, printer);
 						regions.add(region);
@@ -155,8 +155,9 @@ class AstConverter {
 		return regions;
 	}
 	
-	private static ErrorRegion dumpDefinitionRegion(IASTDeclaration decl, Printer printer) {
-		return createErrorRegion(decl, "definitions are not supported", printer);
+	private static Region dumpDefinitionRegion(Integer visibility, IASTDeclaration decl, Printer printer) {
+		//return createErrorRegion(decl, "definitions are not supported", printer);
+		return dumpNonType(visibility, createRange(decl), printer);
 	}
 	
 	private static FunctionRegion dumpFunctionDefinition(final IASTFunctionDefinition functionDef, final IASTDeclaration fullDecl, final Integer currentVisibility,
@@ -455,11 +456,23 @@ class AstConverter {
 		return Collections.singletonList(createErrorRegion(node, message, printer));
 	}
 	
-	private static NonTypeRegion dumpOther(final Integer visibility, final int begin, final int end, Printer printer) {
+	private static NonTypeRegion dumpOther(Integer visibility, final int begin, final int end, Printer printer) {
 		if (begin == end) {
 			return null;
 		}
-		printer.println("<otherDeclarations begin=" + begin + "+" + (end-begin) + " visibility="+ visibility + ">");
+		TokenRange range = new TokenRange() {
+			@Override public int start() {
+				return begin;
+			}
+			@Override public int end() {
+				return end;
+			}
+		};
+		return dumpNonType(visibility, range, printer);
+	}
+	
+	private static NonTypeRegion dumpNonType(final Integer visibility, final TokenRange range, Printer printer) {
+		printer.println("<otherDeclarations begin=" + range.start() + "+" + (range.end()-range.start()) + " visibility="+ visibility + ">");
 		return new NonTypeRegion() {
 			@Override public <T> T accept(Visitor<T> visitor) {
 				return visitor.visitNonType(this);
@@ -468,14 +481,7 @@ class AstConverter {
 				return visibility;
 			}
 			@Override public TokenRange range() {
-				return new TokenRange() {
-					@Override public int start() {
-						return begin;
-					}
-					@Override public int end() {
-						return end;
-					}
-				};
+				return range;
 			}
 		};
 	}
