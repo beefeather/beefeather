@@ -651,7 +651,7 @@ std::pair<Offset,Offset> PTHWriter::EmitIdentifierTable() {
   return std::make_pair(IDOff, StringTableOffset);
 }
 
-void clang::CacheTokensRoger(SmallVector<Token, 4> &tokens, llvm::raw_fd_ostream* OS) {
+void clang::RogerFrontendUtils::CacheTokensRoger(SmallVector<Token, 4> &tokens, llvm::raw_fd_ostream* OS) {
   for (SmallVector<Token, 4>::iterator it = tokens.begin(); it != tokens.end(); ++it) {
     // Emit the token kind, flags, and length.
     Token& T = *it;

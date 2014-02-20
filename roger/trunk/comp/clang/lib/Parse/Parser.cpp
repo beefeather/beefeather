@@ -55,7 +55,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   : PP(pp), Actions(actions), Diags(PP.getDiagnostics()),
     GreaterThanIsOperator(true), ColonIsSacred(false), 
     InMessageExpression(false), TemplateParameterDepth(0),
-    ParsingInObjCContainer(false), rogerParsingFile(0), rogerParsingQueue(0) {
+    ParsingInObjCContainer(false), rogerParsingFile(0), rogerParsingQueue(0), rogerFrontendUtils(0) {
   TemplateIdsBeingCovered = false;
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();

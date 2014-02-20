@@ -18,6 +18,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
@@ -473,7 +474,7 @@ void ASTFrontendAction::ExecuteAction() {
     CI.createSema(getTranslationUnitKind(), CompletionConsumer);
 
   ParseAST(CI.getSema(), CI.getFrontendOpts().ShowStats,
-           CI.getFrontendOpts().SkipFunctionBodies);
+           CI.getFrontendOpts().SkipFunctionBodies, &rogerFrontendUtils);
 }
 
 void PluginASTAction::anchor() { }

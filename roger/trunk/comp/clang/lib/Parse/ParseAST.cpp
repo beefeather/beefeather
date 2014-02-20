@@ -96,7 +96,7 @@ void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer,
   ParseAST(*S.get(), PrintStats, SkipFunctionBodies);
 }
 
-void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
+void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies, RogerFrontendUtils *rogerFrontendUtils) {
   // Collect global stats on Decls/Stmts (until we have a module streamer).
   if (PrintStats) {
     Decl::EnableStatistics();
@@ -112,6 +112,8 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   OwningPtr<Parser> ParseOP(new Parser(S.getPreprocessor(), S,
                                        SkipFunctionBodies));
   Parser &P = *ParseOP.get();
+
+  P.rogerFrontendUtils = rogerFrontendUtils;
 
   PrettyStackTraceParserEntry CrashInfo(P);
 

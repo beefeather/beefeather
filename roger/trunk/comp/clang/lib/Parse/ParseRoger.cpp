@@ -375,6 +375,8 @@ public:
 
 RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
 
+  assert(rogerFrontendUtils && "Roger frontend utils are not available");
+
   {
     const char* tokensFileName = "tokens";
 
@@ -383,7 +385,7 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
     OsDebug.reset(new llvm::raw_fd_ostream(tokensFileName, Error, llvm::sys::fs::F_Binary));
     assert(Error.empty() && "Failed to create debug tokens file");
 
-    CacheTokensRoger(Toks, OsDebug.get());
+    rogerFrontendUtils->CacheTokensRoger(Toks, OsDebug.get());
     OsDebug->close();
   }
 
@@ -400,7 +402,7 @@ RogerNamespaceDeclList* Parser::ParseRogerPartOverview(CachedTokens &Toks) {
     OS.reset(new llvm::raw_fd_ostream(TokensTempPath.c_str(), Error, llvm::sys::fs::F_Binary));
     assert(Error.empty() && "Failed to create main tokens file");
 
-    CacheTokensRoger(Toks, OS.get());
+    rogerFrontendUtils->CacheTokensRoger(Toks, OS.get());
     OS->close();
   }
 

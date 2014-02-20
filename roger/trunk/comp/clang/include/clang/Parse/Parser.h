@@ -62,6 +62,8 @@ namespace clang {
   class RogerNestedTokensState;
   struct RogerTopLevelDecls;
 
+  struct RogerFrontendUtils;
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -2376,8 +2378,10 @@ private:
   virtual void CodeCompleteNaturalLanguage();
 
   // Roger
-private:
+public:
+  RogerFrontendUtils *rogerFrontendUtils;
 
+private:
   void FillRogerSourceFileWithNames(RogerNamespaceDeclList *rogerNsDeclList, DeclContext *DC, RogerParsingNamespace *parsingNs, RogerFile *file, RogerTopLevelDecls *topLevelDecs);
   void FillRogerRecordWithNames(RogerClassDecl *rogerClassDecl, RecordDecl *DC, RogerFile *file, ParsingClass *parsingClass);
   template<typename Types>

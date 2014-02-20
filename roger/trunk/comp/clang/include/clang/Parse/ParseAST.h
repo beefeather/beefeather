@@ -23,6 +23,8 @@ namespace clang {
   class CodeCompleteConsumer;
   class Sema;
 
+  struct RogerFrontendUtils;
+
   /// \brief Parse the entire file specified, notifying the ASTConsumer as
   /// the file is parsed.
   ///
@@ -42,7 +44,7 @@ namespace clang {
   /// \brief Parse the main file known to the preprocessor, producing an 
   /// abstract syntax tree.
   void ParseAST(Sema &S, bool PrintStats = false,
-                bool SkipFunctionBodies = false);
+                bool SkipFunctionBodies = false, RogerFrontendUtils *rogerFrontendUtils = 0);
   
 }  // end namespace clang
 
